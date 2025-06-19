@@ -30,20 +30,47 @@ import androidx.compose.ui.unit.dp
 import com.smpn8yk.nomo_plan.ui.theme.CoklatKayu
 import androidx.compose.ui.window.Dialog
 import androidx.core.graphics.ColorUtils
+import androidx.room.Room.databaseBuilder
+import com.smpn8yk.nomo_plan.data.MoneyPlan
+import com.smpn8yk.nomo_plan.db.MoneyPlanDatabase
 import com.smpn8yk.nomo_plan.ui.theme.IjoBg
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.YearMonth
 
-const val MANAGE_MONEY_REQUEST_CODE = 123
 class ManageMoneyActivity : ComponentActivity(){
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val db: MoneyPlanDatabase = databaseBuilder<MoneyPlanDatabase>(
+            applicationContext,
+            MoneyPlanDatabase::class.java,
+            "moneyplan-database"
+        ).build()
+
         setContent {
             ManageMoneyView(
-                onDismissResultDialog = {
-                    backToMainActivity()
+                onDismissResultDialog = {moneyPlan->
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            async { savePlan(db,moneyPlan) }.await()
+                            Log.d("TEST_PROGRAM","Success saving plan..")
+                            backToMainActivity()
+                        }catch (e:Exception){
+                            Log.d("TEST_PROGRAM","Error saving plan ${e.message}")
+                        }
+                    }
                 }
             )
         }
+    }
+
+    private suspend fun savePlan(db:MoneyPlanDatabase, moneyPlan: MoneyPlan){
+        db.moneyPlanDao().insert(moneyPlan)
     }
 
     private fun backToMainActivity(){
@@ -53,7 +80,7 @@ class ManageMoneyActivity : ComponentActivity(){
 
 @Composable
 fun ManageMoneyView(
-    onDismissResultDialog:()->Unit
+    onDismissResultDialog:(moneyPlan:MoneyPlan)->Unit
 ){
     val showResultDialog = remember { mutableStateOf(false) }
 
@@ -63,6 +90,19 @@ fun ManageMoneyView(
 
     fun calculateBudget(days:Int, nominal:Int):Int{
         return nominal/days
+    }
+
+    fun getMoneyPlan():MoneyPlan{
+        val startDate = LocalDate.now()
+        val endDate = startDate.plusDays(days.intValue.toLong())
+        return MoneyPlan(
+            null,
+            days.intValue,
+            nominal.intValue,
+            budget.intValue,
+            startDate.toString(),
+            endDate.toString()
+        )
     }
 
     Column (
@@ -120,7 +160,7 @@ fun ManageMoneyView(
            showDialog = showResultDialog.value,
            onDimmis = {
                showResultDialog.value = false
-               onDismissResultDialog()
+               onDismissResultDialog(getMoneyPlan())
            },
            budget = budget.intValue
        )

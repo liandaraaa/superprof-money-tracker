@@ -21,7 +21,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.room.Room.databaseBuilder
 import com.smpn8yk.nomo_plan.data.MoneyPlan
+import com.smpn8yk.nomo_plan.db.MoneyPlanDatabase
 import com.smpn8yk.nomo_plan.ui.theme.NomoPlanTheme
 
 class DailyTrackerExpenseActivity : ComponentActivity() {
@@ -31,6 +33,12 @@ class DailyTrackerExpenseActivity : ComponentActivity() {
         val selectedDate = intent.getStringExtra("EXTRA_DATE")
 
         Log.d("TEST_PROGRAM", selectedDate ?: "0")
+
+        val db: MoneyPlanDatabase = databaseBuilder<MoneyPlanDatabase>(
+            applicationContext,
+            MoneyPlanDatabase::class.java,
+            "moneyplan-database"
+        ).build()
 
         setContent {
             NomoPlanTheme {

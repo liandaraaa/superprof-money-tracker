@@ -1,4 +1,5 @@
 package com.smpn8yk.nomo_plan
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -41,7 +42,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.room.Room.databaseBuilder
 import com.smpn8yk.nomo_plan.data.CalendarUiState
+import com.smpn8yk.nomo_plan.db.MoneyPlanDatabase
 import com.smpn8yk.nomo_plan.ui.screens.DailyTrackerExpenseActivity
 import com.smpn8yk.nomo_plan.ui.screens.ManageMoneyActivity
 import com.smpn8yk.nomo_plan.ui.theme.CoklatKayu
@@ -50,17 +53,24 @@ import com.smpn8yk.nomo_plan.ui.theme.NomoPlanTheme
 import com.smpn8yk.nomo_plan.utils.DateUtil
 import com.smpn8yk.nomo_plan.utils.getDates
 import com.smpn8yk.nomo_plan.utils.getDisplayName
-import io.github.boguszpawlowski.composecalendar.SelectableCalendar
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.YearMonth
+
 
 class MainActivity : ComponentActivity(){
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("TEST_PROGRAM", "coba panggil onCreate")
+
         setContent {
             NomoPlanTheme {
                 MainView(
+                    context = this,
                     onClickNewPlan = {
                         navigateToManageMoneyActivity()
                     },
@@ -71,6 +81,7 @@ class MainActivity : ComponentActivity(){
             }
         }
     }
+
 
     override fun onResume() {
         super.onResume()
@@ -108,10 +119,31 @@ class MainActivity : ComponentActivity(){
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainView(
+    context:Context,
     onClickNewPlan:()->Unit,
     onDateClickListener: (CalendarUiState.Date) -> Unit
 ){
-    val isAnyPlan = remember { mutableStateOf(true) }
+    val isMoneyPlanExists = remember { mutableStateOf(false) }
+
+    val db: MoneyPlanDatabase = databaseBuilder<MoneyPlanDatabase>(
+        context,
+        MoneyPlanDatabase::class.java,
+        "moneyplan-database"
+    ).build()
+
+    fun checkMoneyPlanExist(){
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val isExists = async { db.moneyPlanDao().getAlLMoneyPlans().isNotEmpty() }.await()
+                isMoneyPlanExists.value = isExists
+                return@launch
+            }catch (e:Exception){
+                return@launch
+            }
+        }
+    }
+
+    checkMoneyPlanExist()
 
     Scaffold(
         topBar = {
@@ -130,7 +162,7 @@ fun MainView(
                 .padding(padding)
         ) {
 
-            if(isAnyPlan.value){
+            if(isMoneyPlanExists.value){
                 CalendarWidget(
                     days = DateUtil.daysOfWeek,
                     onDateClickListener = { date->
@@ -150,13 +182,15 @@ fun MainView(
 fun EmptyPlanView(
     onNewPlanClicked:()->Unit)
 {
-    Column (modifier = Modifier.fillMaxSize()
-            .background(IjoBg),
+    Column (modifier = Modifier
+        .fillMaxSize()
+        .background(IjoBg),
         verticalArrangement = Arrangement.SpaceBetween){
         Column{
             Text(
                 text = ("Make Your Own Plan !"),
-                modifier = Modifier.align(Alignment.CenterHorizontally)
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
                     .padding(10.dp),
                 fontSize = 24.sp,
                 color = CoklatKayu
