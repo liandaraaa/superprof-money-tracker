@@ -42,9 +42,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
 import androidx.room.Room.databaseBuilder
 import com.smpn8yk.nomo_plan.data.CalendarUiState
+import com.smpn8yk.nomo_plan.data.MoneyPlan
 import com.smpn8yk.nomo_plan.db.MoneyPlanDatabase
+import com.smpn8yk.nomo_plan.ui.MyEventListener
 import com.smpn8yk.nomo_plan.ui.screens.DailyTrackerExpenseActivity
 import com.smpn8yk.nomo_plan.ui.screens.ManageMoneyActivity
 import com.smpn8yk.nomo_plan.ui.theme.CoklatKayu
@@ -57,7 +60,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.time.YearMonth
 
 
@@ -74,8 +76,8 @@ class MainActivity : ComponentActivity(){
                     onClickNewPlan = {
                         navigateToManageMoneyActivity()
                     },
-                    onDateClickListener = {date->
-                        navigateToDailyTrackerExpenseActivity(date.dayOfMonth)
+                    onDateClickListener = {planId,selectedDate->
+                        navigateToDailyTrackerExpenseActivity(planId,selectedDate)
                     }
                 )
             }
@@ -107,10 +109,11 @@ class MainActivity : ComponentActivity(){
         startActivity(Intent(this,ManageMoneyActivity::class.java))
     }
 
-    private fun navigateToDailyTrackerExpenseActivity(date:String){
+    private fun navigateToDailyTrackerExpenseActivity(planId:Int, selectedDate:String){
         val intent = Intent(this, DailyTrackerExpenseActivity::class.java)
-        intent.putExtra("EXTRA_DATE",date)
-        Log.d("TEST_PROGRAM", "navigate daily date $date" )
+        intent.putExtra("EXTRA_PLAN_ID",planId)
+        intent.putExtra("EXTRA_DATE",selectedDate)
+        Log.d("TEST_PROGRAM", "navigate daily date $planId" )
         startActivity(intent)
     }
 
@@ -121,9 +124,10 @@ class MainActivity : ComponentActivity(){
 fun MainView(
     context:Context,
     onClickNewPlan:()->Unit,
-    onDateClickListener: (CalendarUiState.Date) -> Unit
+    onDateClickListener: (planId:Int, selectedDate:String) -> Unit
 ){
     val isMoneyPlanExists = remember { mutableStateOf(false) }
+    val currentMoneyPlan = remember { mutableStateOf(MoneyPlan()) }
 
     val db: MoneyPlanDatabase = databaseBuilder<MoneyPlanDatabase>(
         context,
@@ -134,8 +138,12 @@ fun MainView(
     fun checkMoneyPlanExist(){
         CoroutineScope(Dispatchers.Main).launch {
             try {
-                val isExists = async { db.moneyPlanDao().getAlLMoneyPlans().isNotEmpty() }.await()
+                val currentPlan = async { db.moneyPlanDao().getAlLMoneyPlans() }.await()
+                val isExists = currentPlan.isNotEmpty()
                 isMoneyPlanExists.value = isExists
+                if(isExists){
+                    currentMoneyPlan.value = currentPlan[0] ?: MoneyPlan()
+                }
                 return@launch
             }catch (e:Exception){
                 return@launch
@@ -143,7 +151,14 @@ fun MainView(
         }
     }
 
-    checkMoneyPlanExist()
+    MyEventListener {
+        when (it) {
+            Lifecycle.Event.ON_RESUME -> {
+                checkMoneyPlanExist()
+            }
+            else -> {}
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -166,7 +181,7 @@ fun MainView(
                 CalendarWidget(
                     days = DateUtil.daysOfWeek,
                     onDateClickListener = { date->
-                        onDateClickListener(date)
+                        onDateClickListener(currentMoneyPlan.value.id ?: 0, date.dateFormat)
                     }
                 )
             }else{

@@ -1,9 +1,11 @@
 package com.smpn8yk.nomo_plan.utils
 
+import android.util.Log
 import com.smpn8yk.nomo_plan.data.CalendarUiState
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -31,7 +33,13 @@ fun getDates(yearMonth: YearMonth): List<CalendarUiState.Date> {
                 } else {
                     "" // Fill with empty string for days outside the current month
                 },
-                isSelected = date.isEqual(LocalDate.now()) && date.monthValue == yearMonth.monthValue
+                isSelected = date.isEqual(LocalDate.now()) && date.monthValue == yearMonth.monthValue,
+                dateFormat =
+                    if (date.monthValue == yearMonth.monthValue) {
+                        yearMonth.getDateFormat(date.dayOfMonth)
+                    } else {
+                        "" // Fill with empty string for days outside the current month
+                    },
             )
         }
 }
@@ -48,4 +56,10 @@ fun YearMonth.getDayOfMonthStartingFromMonday(): List<LocalDate> {
 
 fun YearMonth.getDisplayName(): String {
     return "${month.getDisplayName(TextStyle.FULL, Locale.getDefault())} $year"
+}
+
+fun YearMonth.getDateFormat(day:Int): String {
+    val date = atDay(day).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+    Log.d("TEST_PROGRAM","get date fomat : $date")
+    return date
 }

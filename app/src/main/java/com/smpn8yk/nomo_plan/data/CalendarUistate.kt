@@ -15,10 +15,11 @@ data class CalendarUiState(
     }
     data class Date(
         val dayOfMonth: String,
-        val isSelected: Boolean
+        val isSelected: Boolean,
+        val dateFormat: String
     ) {
         companion object {
-            val Empty = Date("", false)
+            val Empty = Date("", false, "")
         }
     }
 }
