@@ -45,7 +45,11 @@ import com.smpn8yk.nomo_plan.data.MoneyPlanStatus
 import com.smpn8yk.nomo_plan.data.MoneyPlanWithExpenses
 import com.smpn8yk.nomo_plan.db.MoneyPlanDatabase
 import com.smpn8yk.nomo_plan.ui.MyEventListener
+import com.smpn8yk.nomo_plan.ui.theme.CoklatKayu
 import com.smpn8yk.nomo_plan.ui.theme.IjoBg
+import com.smpn8yk.nomo_plan.ui.theme.IjoYes
+import com.smpn8yk.nomo_plan.ui.theme.Krem
+import com.smpn8yk.nomo_plan.ui.theme.MerahNo
 import com.smpn8yk.nomo_plan.ui.theme.NomoPlanTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -90,6 +94,12 @@ fun DailyTrackerExpenseView(
 
     val disableCompleteButton = remember { mutableStateOf(false) }
 
+    val currentExpenses =
+        plansExpenses.value?.expenses?.filter { it.date == selectedDate }
+
+    val isMoneyPlanInRangeDates =
+        plansExpenses.value?.plan?.range_dates?.find { it == selectedDate }
+
     val db: MoneyPlanDatabase = databaseBuilder<MoneyPlanDatabase>(
         context,
         MoneyPlanDatabase::class.java,
@@ -103,8 +113,6 @@ fun DailyTrackerExpenseView(
                     async { db.moneyPlanDao().getMoneyPlanWithExpenses(currentPlanId) }.await()
                 Log.d("TEST_PROGRAM", "check moneyPLanExpenses $moneyPlanWithExpenses")
                 plansExpenses.value = moneyPlanWithExpenses
-                disableCompleteButton.value =
-                    moneyPlanWithExpenses?.plan?.status === MoneyPlanStatus.COMPLETE.name
             } catch (e: Exception) {
                 Log.e("TEST_PROGRAM", "error to moneyPLanExpenses ${e.message}")
             }
@@ -167,33 +175,34 @@ fun DailyTrackerExpenseView(
                 })
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showInputExpenseDialog.value = true },
-            ) {
-                Icon(Icons.Filled.Add, "Floating action button.")
-            }
+           if (currentExpenses?.find { it.report_status == ExpenseReportStatus.EMPTY.name } != null){
+               FloatingActionButton(
+                   onClick = { showInputExpenseDialog.value = true },
+               ) {
+                   Icon(Icons.Filled.Add, "Floating action button.")
+               }
+           }
         },
         bottomBar = {
-            Button(
-                enabled = !disableCompleteButton.value,
-                onClick = {
-                    showCompleteReportDialog.value = true
-                },
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth()
-            ) {
-                Text("Complete Report")
+            if(isMoneyPlanInRangeDates !== null){
+                Button(
+                    enabled = !disableCompleteButton.value,
+                    onClick = {
+                        showCompleteReportDialog.value = true
+                    },
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth()
+                ) {
+                    Text("Complete Report")
+                }
             }
         },
     ) { padding ->
-        val isMoneyPlanInRangeDates =
-            plansExpenses.value?.plan?.range_dates?.find { it == selectedDate }
-        if (plansExpenses.value == null || isMoneyPlanInRangeDates == null) {
+       if (plansExpenses.value == null || isMoneyPlanInRangeDates == null) {
             NoMoneyPlanView(padding)
         } else {
-            val currentExpenses =
-                plansExpenses.value?.expenses?.filter { it.date.equals(selectedDate) }
+            disableCompleteButton.value = currentExpenses?.find { it.report_status == ExpenseReportStatus.EMPTY.name } == null
             if (currentExpenses.isNullOrEmpty()) {
                 EmptyMoneyPlanView(padding)
             } else {
@@ -357,17 +366,18 @@ fun InputExpenseDialogContentView(
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = IjoBg
+            containerColor = Krem
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(32.dp),
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             IconButton(
-                onClick = { onDismiss() }
+                onClick = { onDismiss() },
+                modifier = Modifier.align(Alignment.End)
             ) {
                 Icon(
                     imageVector = Icons.Filled.Close,
@@ -376,6 +386,7 @@ fun InputExpenseDialogContentView(
             }
             Text(
                 text = "Input Expense",
+                modifier = Modifier.padding(8.dp)
             )
             Column(
                 modifier = Modifier
@@ -432,6 +443,17 @@ fun InputExpenseDialogContentView(
     }
 }
 
+@Preview
+@Composable
+fun PreviewInputExpenseContentViewDialog(){
+    InputExpenseDialogContentView(
+        planId = 0,
+        onDismiss = {},
+        onOkClicked = {},
+        selectedDate = ""
+    )
+}
+
 @Composable
 fun CompleteReportDialogView(
     showDialog: Boolean,
@@ -474,7 +496,7 @@ fun CompleteReportDialogContentView(
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = IjoBg
+            containerColor = if(isOverBudget.value) MerahNo else IjoYes
         )
     ) {
         Column(
@@ -498,4 +520,13 @@ fun CompleteReportDialogContentView(
             }
         }
     }
+}
+
+@Preview
+@Composable
+fun PreviewCompleteReportContentDialogView(){
+    CompleteReportDialogContentView(
+        currentPlanExpenses = MoneyPlanWithExpenses(),
+        onOkClicked = {}
+    )
 }
