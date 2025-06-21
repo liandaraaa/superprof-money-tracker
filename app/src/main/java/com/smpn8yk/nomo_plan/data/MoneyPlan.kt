@@ -15,8 +15,13 @@ data class MoneyPlan(
     val nominal: Int = 0,
     @SerializedName("budget")
     val budget: Int = 0,
-    @SerializedName("start_date")
-    val start_date: String = "",
-    @SerializedName("end_date")
-    val end_date: String = ""
+    @SerializedName("range_dates")
+    val range_dates: List<String> = listOf(),
+    @SerializedName("status")
+    val status: String = MoneyPlanStatus.PENDING.name
 )
+
+enum class MoneyPlanStatus {
+    PENDING,
+    COMPLETE
+}

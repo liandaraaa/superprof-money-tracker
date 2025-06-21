@@ -18,12 +18,22 @@ interface MoneyPlanDao {
     suspend fun deleteMoneyPlanById(id: Int)
 
     @Query("SELECT * FROM moneyPlan")
-    suspend fun getAlLMoneyPlans(): List<MoneyPlan?>
+    suspend fun getAlLMoneyPlans(): List<MoneyPlan>
 
     @Transaction
-    @Query("SELECT * FROM moneyplan Where id = :id and start_date = :startDate")
-    fun getMoneyPlanWithExpenses(id: Int, startDate:String): MoneyPlanWithExpenses?
+    @Query("SELECT * FROM moneyplan Where id = :id")
+    fun getMoneyPlanWithExpenses(id: Int): MoneyPlanWithExpenses?
+
+    @Transaction
+    @Query("SELECT * FROM moneyplan")
+    fun getALlMoneyPlanWithExpenses(): List<MoneyPlanWithExpenses>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertExpense(expense: Expense)
+
+    @Query("UPDATE moneyplan SET status = :newStatus WHERE id = :id")
+    fun updateStatus(id: Int, newStatus: String)
+
+    @Query("UPDATE expense SET report_status = :newStatus WHERE date = :date")
+    fun updateReportStatus(date: String, newStatus: String)
 }

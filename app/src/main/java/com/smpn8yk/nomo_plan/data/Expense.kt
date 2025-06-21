@@ -8,11 +8,22 @@ import com.google.gson.annotations.SerializedName
 data class Expense(
     @PrimaryKey(autoGenerate = true)
     @SerializedName("expense_id")
-    val expense_id: Int?,
+    val expense_id: Int? = null,
     @SerializedName("plan_id")
-    val plan_id: Int?,
+    val plan_id: Int? = null,
+    @SerializedName("date")
+    val date: String = "",
     @SerializedName("item")
-    val item:String,
+    val item:String = "",
     @SerializedName("price")
-    val price: Int
+    val price: Int = 0,
+    @SerializedName("report_status")
+    val report_status: String = ExpenseReportStatus.NONE.name
 )
+
+enum class ExpenseReportStatus {
+    NONE,
+    EMPTY,
+    SUCCESS,
+    FAILED
+}

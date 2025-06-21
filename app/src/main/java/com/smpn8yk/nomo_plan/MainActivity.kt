@@ -31,8 +31,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,14 +47,23 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.room.Room.databaseBuilder
 import com.smpn8yk.nomo_plan.data.CalendarUiState
+import com.smpn8yk.nomo_plan.data.Expense
+import com.smpn8yk.nomo_plan.data.ExpenseReportStatus
 import com.smpn8yk.nomo_plan.data.MoneyPlan
+import com.smpn8yk.nomo_plan.data.MoneyPlanStatus
+import com.smpn8yk.nomo_plan.data.MoneyPlanWithExpenses
 import com.smpn8yk.nomo_plan.db.MoneyPlanDatabase
 import com.smpn8yk.nomo_plan.ui.MyEventListener
 import com.smpn8yk.nomo_plan.ui.screens.DailyTrackerExpenseActivity
 import com.smpn8yk.nomo_plan.ui.screens.ManageMoneyActivity
+import com.smpn8yk.nomo_plan.ui.theme.Abu
 import com.smpn8yk.nomo_plan.ui.theme.CoklatKayu
 import com.smpn8yk.nomo_plan.ui.theme.IjoBg
+import com.smpn8yk.nomo_plan.ui.theme.IjoDaun
+import com.smpn8yk.nomo_plan.ui.theme.IjoYes
+import com.smpn8yk.nomo_plan.ui.theme.MerahNo
 import com.smpn8yk.nomo_plan.ui.theme.NomoPlanTheme
+import com.smpn8yk.nomo_plan.ui.theme.Pink80
 import com.smpn8yk.nomo_plan.utils.DateUtil
 import com.smpn8yk.nomo_plan.utils.getDates
 import com.smpn8yk.nomo_plan.utils.getDisplayName
@@ -126,24 +137,25 @@ fun MainView(
     onClickNewPlan:()->Unit,
     onDateClickListener: (planId:Int, selectedDate:String) -> Unit
 ){
-    val isMoneyPlanExists = remember { mutableStateOf(false) }
-    val currentMoneyPlan = remember { mutableStateOf(MoneyPlan()) }
+    val moneyPlansWithExpenses = remember { mutableStateListOf(MoneyPlanWithExpenses()) }
+    val  uiState = remember { mutableStateOf(CalendarUiState.Init) }
 
-    val db: MoneyPlanDatabase = databaseBuilder<MoneyPlanDatabase>(
+    val db: MoneyPlanDatabase = databaseBuilder(
         context,
         MoneyPlanDatabase::class.java,
         "moneyplan-database"
-    ).build()
+    ).allowMainThreadQueries()
+        .build()
 
     fun checkMoneyPlanExist(){
         CoroutineScope(Dispatchers.Main).launch {
             try {
-                val currentPlan = async { db.moneyPlanDao().getAlLMoneyPlans() }.await()
-                val isExists = currentPlan.isNotEmpty()
-                isMoneyPlanExists.value = isExists
-                if(isExists){
-                    currentMoneyPlan.value = currentPlan[0] ?: MoneyPlan()
-                }
+                val plans = async { db.moneyPlanDao().getALlMoneyPlanWithExpenses() }.await()
+                moneyPlansWithExpenses.addAll(plans)
+                uiState.value = CalendarUiState(
+                    yearMonth = YearMonth.now(),
+                    dates = getDates(YearMonth.now(),plans)
+                )
                 return@launch
             }catch (e:Exception){
                 return@launch
@@ -151,9 +163,19 @@ fun MainView(
         }
     }
 
+    fun toSelectedMonth(currentMonth: YearMonth) {
+        Log.d("TEST_PROGRAM","select current month $currentMonth")
+        uiState.value = CalendarUiState(
+            yearMonth = currentMonth,
+            dates = getDates(currentMonth,moneyPlansWithExpenses)
+        )
+    }
+
     MyEventListener {
         when (it) {
             Lifecycle.Event.ON_RESUME -> {
+                Log.d("TEST_PROGRAM", "cek on resume lifecycle" +
+                        "")
                 checkMoneyPlanExist()
             }
             else -> {}
@@ -177,12 +199,17 @@ fun MainView(
                 .padding(padding)
         ) {
 
-            if(isMoneyPlanExists.value){
+            if(moneyPlansWithExpenses.any { it.plan.id != null }){
+                Log.d("TEST_PROGRAM","show calendar widget $moneyPlansWithExpenses")
                 CalendarWidget(
                     days = DateUtil.daysOfWeek,
                     onDateClickListener = { date->
-                        onDateClickListener(currentMoneyPlan.value.id ?: 0, date.dateFormat)
-                    }
+                        val currentMoneyPlan  = moneyPlansWithExpenses.map { it.plan }.find { it.range_dates.contains(date.dateFormat) }
+                        Log.d("TEST_PROGRAM","cek current moneyplan $currentMoneyPlan")
+                        onDateClickListener(currentMoneyPlan?.id ?: 0, date.dateFormat)
+                    },
+                    uiState = uiState.value,
+                    onSelectedMonth = {yearMonth -> toSelectedMonth(yearMonth) }
                 )
             }else{
                 EmptyPlanView {
@@ -200,24 +227,15 @@ fun EmptyPlanView(
     Column (modifier = Modifier
         .fillMaxSize()
         .background(IjoBg),
-        verticalArrangement = Arrangement.SpaceBetween){
-        Column{
-            Text(
-                text = ("Make Your Own Plan !"),
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(10.dp),
-                fontSize = 24.sp,
-                color = CoklatKayu
-            )
-            Image(
-                painter = painterResource(id = R.drawable.ops),
-                contentDescription = "Empty illustration",
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(top = 100.dp)
-            )
-        }
+        verticalArrangement = Arrangement.SpaceBetween
+    ){
+        Image(
+            painter = painterResource(id = R.drawable.ops),
+            contentDescription = "Empty illustration",
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(top = 100.dp)
+        )
         Button(
             onClick = {
                     onNewPlanClicked()
@@ -246,18 +264,9 @@ fun PreviewEmptyPlanView() {
 fun CalendarWidget(
     days: Array<String>,
     onDateClickListener: (CalendarUiState.Date) -> Unit,
+    uiState: CalendarUiState,
+    onSelectedMonth:(YearMonth)->Unit
 ) {
-
-    val  uiState = remember { mutableStateOf(CalendarUiState.Init) }
-
-    fun toCurrentMonth(currentMonth: YearMonth) {
-        Log.d("TEST_PROGRAM","select current month $currentMonth")
-        uiState.value = CalendarUiState(
-            yearMonth = currentMonth,
-            dates = getDates(currentMonth)
-        )
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -270,16 +279,16 @@ fun CalendarWidget(
             }
         }
         Header(
-            yearMonth = uiState.value.yearMonth,
+            yearMonth = uiState.yearMonth,
             onPreviousMonthButtonClicked = {yearMonth ->
-                toCurrentMonth(yearMonth)
+                onSelectedMonth(yearMonth)
             },
             onNextMonthButtonClicked = {yearMonth ->
-                toCurrentMonth(yearMonth)
+                onSelectedMonth(yearMonth)
             },
         )
         Content(
-            dates = uiState.value.dates,
+            dates = uiState.dates,
             onDateClickListener = onDateClickListener
         )
     }
@@ -381,7 +390,13 @@ fun ContentItem(
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier
                 .align(Alignment.Center)
-                .padding(10.dp)
+                .padding(10.dp),
+            color = when(date.status){
+                ExpenseReportStatus.EMPTY.name -> CoklatKayu
+                ExpenseReportStatus.SUCCESS.name -> IjoYes
+                ExpenseReportStatus.FAILED.name -> MerahNo
+                else -> Abu
+            }
         )
     }
 }
@@ -393,6 +408,8 @@ fun PreviewCalendarPlanView(){
         days = DateUtil.daysOfWeek,
         onDateClickListener = { date->
             Log.d("TEST_PROGRAM","Select date $date")
-        }
+        },
+        uiState = CalendarUiState.Init,
+        onSelectedMonth = {}
     )
 }

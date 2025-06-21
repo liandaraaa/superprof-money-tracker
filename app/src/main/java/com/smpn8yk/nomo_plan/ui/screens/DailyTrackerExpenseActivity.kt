@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,12 +15,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -33,9 +36,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.room.Room.databaseBuilder
 import com.smpn8yk.nomo_plan.data.Expense
+import com.smpn8yk.nomo_plan.data.ExpenseReportStatus
+import com.smpn8yk.nomo_plan.data.MoneyPlanStatus
 import com.smpn8yk.nomo_plan.data.MoneyPlanWithExpenses
 import com.smpn8yk.nomo_plan.db.MoneyPlanDatabase
 import com.smpn8yk.nomo_plan.ui.MyEventListener
@@ -50,7 +56,7 @@ class DailyTrackerExpenseActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val currentPlanId = intent.getIntExtra("EXTRA_PLAN_ID",0)
+        val currentPlanId = intent.getIntExtra("EXTRA_PLAN_ID", 0)
         val selectedDate = intent.getStringExtra("EXTRA_DATE")
 
         Log.d("TEST_PROGRAM", "currentPlanId : $currentPlanId")
@@ -77,12 +83,12 @@ fun DailyTrackerExpenseView(
 ) {
 
     val plansExpenses = remember {
-        mutableStateOf(
-            MoneyPlanWithExpenses()
-        )
+        mutableStateOf<MoneyPlanWithExpenses?>(null)
     }
     val showInputExpenseDialog = remember { mutableStateOf(false) }
     val showCompleteReportDialog = remember { mutableStateOf(false) }
+
+    val disableCompleteButton = remember { mutableStateOf(false) }
 
     val db: MoneyPlanDatabase = databaseBuilder<MoneyPlanDatabase>(
         context,
@@ -94,9 +100,11 @@ fun DailyTrackerExpenseView(
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val moneyPlanWithExpenses =
-                    async { db.moneyPlanDao().getMoneyPlanWithExpenses(currentPlanId,selectedDate) }.await()
+                    async { db.moneyPlanDao().getMoneyPlanWithExpenses(currentPlanId) }.await()
                 Log.d("TEST_PROGRAM", "check moneyPLanExpenses $moneyPlanWithExpenses")
-                plansExpenses.value = moneyPlanWithExpenses ?: MoneyPlanWithExpenses()
+                plansExpenses.value = moneyPlanWithExpenses
+                disableCompleteButton.value =
+                    moneyPlanWithExpenses?.plan?.status === MoneyPlanStatus.COMPLETE.name
             } catch (e: Exception) {
                 Log.e("TEST_PROGRAM", "error to moneyPLanExpenses ${e.message}")
             }
@@ -112,6 +120,26 @@ fun DailyTrackerExpenseView(
                 checkMoneyPlanExist()
             } catch (e: Exception) {
                 Log.d("TEST_PROGRAM", "Error saving plan ${e.message}")
+            }
+        }
+    }
+
+    fun updatePlanStatus(selectedDate: String, isOverBudget: Boolean) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val newExpenseReportStatus =
+                    if (isOverBudget) ExpenseReportStatus.FAILED.name else ExpenseReportStatus.SUCCESS.name
+                val newPlanStatus = MoneyPlanStatus.COMPLETE.name
+                async { db.moneyPlanDao().updateStatus(currentPlanId, newPlanStatus) }.await()
+                async {
+                    db.moneyPlanDao().updateReportStatus(selectedDate, newExpenseReportStatus)
+                }.await()
+                Log.d("TEST_PROGRAM", "Success update status..")
+                showCompleteReportDialog.value = false
+                disableCompleteButton.value = true
+                checkMoneyPlanExist()
+            } catch (e: Exception) {
+                Log.d("TEST_PROGRAM", "Error update status ${e.message}")
             }
         }
     }
@@ -147,6 +175,7 @@ fun DailyTrackerExpenseView(
         },
         bottomBar = {
             Button(
+                enabled = !disableCompleteButton.value,
                 onClick = {
                     showCompleteReportDialog.value = true
                 },
@@ -158,44 +187,103 @@ fun DailyTrackerExpenseView(
             }
         },
     ) { padding ->
-        if(plansExpenses.value.expenses.isEmpty()){
-            Text(
-                text = "Belum ada pengeluaran"
-            )
-        }else{
-            LazyColumn(
-                contentPadding = padding
-            ) {
-                items(plansExpenses.value.expenses) { expense ->
-                    ExpenseItemView(expense)
-                }
+        val isMoneyPlanInRangeDates =
+            plansExpenses.value?.plan?.range_dates?.find { it == selectedDate }
+        if (plansExpenses.value == null || isMoneyPlanInRangeDates == null) {
+            NoMoneyPlanView(padding)
+        } else {
+            val currentExpenses =
+                plansExpenses.value?.expenses?.filter { it.date.equals(selectedDate) }
+            if (currentExpenses.isNullOrEmpty()) {
+                EmptyMoneyPlanView(padding)
+            } else {
+                MoneyPlanListView(padding, currentExpenses)
             }
+            InputExpenseDialogView(
+                showDialog = showInputExpenseDialog.value,
+                onDismiss = { expense ->
+                    if (expense !== null) {
+                        saveExpense(expense)
+                    } else {
+                        showInputExpenseDialog.value = false
+                    }
+                },
+                planId = currentPlanId,
+                selectedDate = selectedDate
+            )
+            CompleteReportDialogView(
+                showDialog = showCompleteReportDialog.value,
+                onDismiss = { isOverBudget ->
+                    updatePlanStatus(selectedDate, isOverBudget)
+                },
+                currentPlanExpenses = plansExpenses.value ?: MoneyPlanWithExpenses()
+            )
         }
-        InputExpenseDialogView(
-            showDialog = showInputExpenseDialog.value,
-            onDismiss = { expense ->
-                saveExpense(expense)
-            },
-            planId = currentPlanId
-        )
-        CompleteReportDialogView(
-            showDialog = showCompleteReportDialog.value,
-            onDismiss = {
-                showCompleteReportDialog.value = false
-            },
-            currentPlanExpenses = plansExpenses.value
-        )
+    }
+}
+
+@Composable
+fun NoMoneyPlanView(padding: PaddingValues) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(padding)
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp)
+        ) {
+            Text(
+                text = "Ops! Kamu belum dapat membuat pengeluaran",
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+            Text(
+                text = "Tanggal yang kamu pilih tidak ada dalam perencanaanmu"
+            )
+        }
+    }
+}
+
+@Composable
+fun EmptyMoneyPlanView(padding: PaddingValues) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(padding)
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp)
+        ) {
+            Text(
+                text = "Pengeluaranmu hari ini masih kosong",
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+            Text(
+                text = "Silahkan buat laporan pengeluaran mu sekarang juga"
+            )
+        }
+    }
+}
+
+@Composable
+fun MoneyPlanListView(padding: PaddingValues, expenses: List<Expense>) {
+    LazyColumn(
+        contentPadding = padding
+    ) {
+        items(expenses) { expense ->
+            ExpenseItemView(expense)
+        }
     }
 }
 
 @Composable
 fun ExpenseItemView(
     expense: Expense
-){
+) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
             .padding(8.dp)
-    ){
+    ) {
         Column(
             modifier = Modifier.padding(8.dp)
         ) {
@@ -212,23 +300,32 @@ fun ExpenseItemView(
 
 @Preview
 @Composable
-fun PreviewExpenseItemView(){
-    ExpenseItemView(Expense(null,null,"Roti",1000))
+fun PreviewExpenseItemView() {
+    ExpenseItemView(Expense(null, null, "", "Roti", 1000, ExpenseReportStatus.EMPTY.name))
 }
 
 @Composable
 fun InputExpenseDialogView(
     showDialog: Boolean,
-    onDismiss:(expense:Expense)->Unit,
-    planId: Int
+    onDismiss: (expense: Expense?) -> Unit,
+    planId: Int,
+    selectedDate: String
 ) {
-    if(showDialog){
+    if (showDialog) {
         Dialog(
+            properties = DialogProperties(
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true
+            ),
             onDismissRequest = {},
         ) {
             InputExpenseDialogContentView(
                 planId = planId,
-                onOkClicked = onDismiss
+                selectedDate = selectedDate,
+                onOkClicked = onDismiss,
+                onDismiss = {
+                    onDismiss(null)
+                }
             )
         }
     }
@@ -238,19 +335,23 @@ fun InputExpenseDialogView(
 
 @Composable
 fun InputExpenseDialogContentView(
-    planId:Int,
-    onOkClicked:(expense:Expense)->Unit
-){
+    planId: Int,
+    selectedDate: String,
+    onOkClicked: (expense: Expense) -> Unit,
+    onDismiss: () -> Unit
+) {
 
     val itemName = remember { mutableStateOf("") }
     val itemPrice = remember { mutableIntStateOf(0) }
 
-    fun getExpense():Expense{
+    fun getExpense(): Expense {
         return Expense(
             expense_id = null,
             plan_id = planId,
+            date = selectedDate,
             item = itemName.value,
-            price = itemPrice.intValue
+            price = itemPrice.intValue,
+            report_status = ExpenseReportStatus.EMPTY.name
         )
     }
 
@@ -265,6 +366,14 @@ fun InputExpenseDialogContentView(
                 .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            IconButton(
+                onClick = { onDismiss() }
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Close"
+                )
+            }
             Text(
                 text = "Input Expense",
             )
@@ -287,7 +396,9 @@ fun InputExpenseDialogContentView(
                     placeholder = {
                         Text("Masukan nama item")
                     },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
                 )
                 OutlinedTextField(
                     value = itemPrice.intValue.toString(),
@@ -302,7 +413,9 @@ fun InputExpenseDialogContentView(
                     placeholder = {
                         Text("Masukan harga item")
                     },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
                 )
             }
             Button(
@@ -318,13 +431,14 @@ fun InputExpenseDialogContentView(
         }
     }
 }
+
 @Composable
 fun CompleteReportDialogView(
     showDialog: Boolean,
-    onDismiss:()->Unit,
+    onDismiss: (isOverBudget: Boolean) -> Unit,
     currentPlanExpenses: MoneyPlanWithExpenses
 ) {
-    if(showDialog){
+    if (showDialog) {
         Dialog(
             onDismissRequest = {},
         ) {
@@ -340,17 +454,18 @@ fun CompleteReportDialogView(
 
 @Composable
 fun CompleteReportDialogContentView(
-    currentPlanExpenses:MoneyPlanWithExpenses,
-    onOkClicked:()->Unit
-){
+    currentPlanExpenses: MoneyPlanWithExpenses,
+    onOkClicked: (isOverBudget: Boolean) -> Unit
+) {
 
     val isOverBudget = remember { mutableStateOf(false) }
 
-    fun checkReport(){
-        val totalExpenses = currentPlanExpenses.expenses.map { it.price }.reduce{acc,price-> acc+price}
-        if(currentPlanExpenses.plan.budget > totalExpenses){
+    fun checkReport() {
+        val totalExpenses =
+            currentPlanExpenses.expenses.map { it.price }.reduce { acc, price -> acc + price }
+        if (currentPlanExpenses.plan.budget > totalExpenses) {
             isOverBudget.value = false
-        }else{
+        } else {
             isOverBudget.value = true
         }
     }
@@ -369,11 +484,11 @@ fun CompleteReportDialogContentView(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = if(isOverBudget.value) "Pengeluaran kamu lebih besar dari budget. Yuk perbaiki, kamu bisa!" else "Kamu Hebat! Kamu sudah bisa mengatur pengeluranmu dengan baik",
+                text = if (isOverBudget.value) "Pengeluaran kamu lebih besar dari budget. Yuk perbaiki, kamu bisa!" else "Kamu Hebat! Kamu sudah bisa mengatur pengeluranmu dengan baik",
             )
             Button(
                 onClick = {
-                    onOkClicked()
+                    onOkClicked(isOverBudget.value)
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {

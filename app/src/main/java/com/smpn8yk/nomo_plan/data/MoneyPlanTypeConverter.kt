@@ -10,9 +10,9 @@ class MoneyPlanTypeConverter {
     }
 
     @TypeConverter
-    fun fromMoneyPlanList(value: List<MoneyPlan>): String = gson.toJson(value)
+    fun fromRangeDateList(value: List<String>): String = gson.toJson(value)
 
     @TypeConverter
-    fun toMoneyPlanList(value: String): List<MoneyPlan> =
-        gson.fromJson(value, object : TypeToken<List<MoneyPlan>>() {}.type)
+    fun toRangeDateList(value: String): List<String> =
+        gson.fromJson(value, object : TypeToken<List<String>>() {}.type)
 }
