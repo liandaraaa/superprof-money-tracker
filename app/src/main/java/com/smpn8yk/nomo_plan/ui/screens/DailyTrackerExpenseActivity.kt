@@ -189,7 +189,7 @@ fun DailyTrackerExpenseView(
             )
         },
         floatingActionButton = {
-           if (currentExpenses?.find { it.report_status == ExpenseReportStatus.EMPTY.name } != null){
+           if (isMoneyPlanInRangeDates !== null && (currentExpenses.isNullOrEmpty() || currentExpenses.find { it.report_status == ExpenseReportStatus.EMPTY.name } != null)){
                FloatingActionButton(
                    onClick = { showInputExpenseDialog.value = true },
                ) {
@@ -221,6 +221,14 @@ fun DailyTrackerExpenseView(
                 EmptyMoneyPlanView(padding)
             } else {
                 MoneyPlanListView(padding, currentExpenses)
+                CompleteReportDialogView(
+                    showDialog = showCompleteReportDialog.value,
+                    onDismiss = { isOverBudget ->
+                        updatePlanStatus(selectedDate, isOverBudget)
+                    },
+                    currentBudget = plansExpenses.value?.plan?.budget ?: 0,
+                    currentPlanExpenses = currentExpenses
+                )
             }
             InputExpenseDialogView(
                 showDialog = showInputExpenseDialog.value,
@@ -233,13 +241,6 @@ fun DailyTrackerExpenseView(
                 },
                 planId = currentPlanId,
                 selectedDate = selectedDate
-            )
-            CompleteReportDialogView(
-                showDialog = showCompleteReportDialog.value,
-                onDismiss = { isOverBudget ->
-                    updatePlanStatus(selectedDate, isOverBudget)
-                },
-                currentPlanExpenses = plansExpenses.value ?: MoneyPlanWithExpenses()
             )
         }
     }
@@ -472,13 +473,15 @@ fun PreviewInputExpenseContentViewDialog(){
 fun CompleteReportDialogView(
     showDialog: Boolean,
     onDismiss: (isOverBudget: Boolean) -> Unit,
-    currentPlanExpenses: MoneyPlanWithExpenses
+    currentBudget:Int,
+    currentPlanExpenses: List<Expense>,
 ) {
     if (showDialog) {
         Dialog(
             onDismissRequest = {},
         ) {
             CompleteReportDialogContentView(
+                currentBudget = currentBudget,
                 currentPlanExpenses = currentPlanExpenses,
                 onOkClicked = onDismiss
             )
@@ -490,7 +493,8 @@ fun CompleteReportDialogView(
 
 @Composable
 fun CompleteReportDialogContentView(
-    currentPlanExpenses: MoneyPlanWithExpenses,
+    currentBudget:Int,
+    currentPlanExpenses: List<Expense>,
     onOkClicked: (isOverBudget: Boolean) -> Unit
 ) {
 
@@ -498,12 +502,10 @@ fun CompleteReportDialogContentView(
 
     fun checkReport() {
         val totalExpenses =
-            currentPlanExpenses.expenses.map { it.price }.reduce { acc, price -> acc + price }
-        if (currentPlanExpenses.plan.budget > totalExpenses) {
-            isOverBudget.value = false
-        } else {
-            isOverBudget.value = true
-        }
+            currentPlanExpenses.map { it.price }.reduce { acc, price -> acc + price }
+        isOverBudget.value = totalExpenses > currentBudget
+        Log.d("TEST_PROGRAM","Cek reprot : $totalExpenses over budget $currentBudget result ${isOverBudget.value}")
+
     }
 
     checkReport()
@@ -540,7 +542,8 @@ fun CompleteReportDialogContentView(
 @Composable
 fun PreviewCompleteReportContentDialogView(){
     CompleteReportDialogContentView(
-        currentPlanExpenses = MoneyPlanWithExpenses(),
+        currentBudget = 0,
+        currentPlanExpenses = listOf(),
         onOkClicked = {}
     )
 }

@@ -33,6 +33,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
@@ -45,6 +46,8 @@ import com.smpn8yk.nomo_plan.data.MoneyPlanStatus
 import com.smpn8yk.nomo_plan.db.MoneyPlanDatabase
 import com.smpn8yk.nomo_plan.ui.theme.CoklatKayu
 import com.smpn8yk.nomo_plan.ui.theme.IjoBg
+import com.smpn8yk.nomo_plan.ui.theme.IjoDaun
+import com.smpn8yk.nomo_plan.ui.theme.IjoYes
 import com.smpn8yk.nomo_plan.ui.theme.Krem
 import com.smpn8yk.nomo_plan.ui.theme.NomoPlanTheme
 import kotlinx.coroutines.CoroutineScope
@@ -113,8 +116,8 @@ fun ManageMoneyView(
 
     fun getRangeDates(): List<String> {
         val startDate = LocalDate.now()
-        val nextDates = mutableListOf(startDate.toString())
-        for (i in 1..days.intValue) {
+        val nextDates = mutableListOf<String>()
+        for (i in 0..<days.intValue) {
             nextDates.add(startDate.plusDays(i.toLong()).toString())
         }
         return nextDates
@@ -240,7 +243,7 @@ fun ResultDialogContentView(
 ) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = IjoBg
+            containerColor = IjoDaun
         )
     ) {
         Column(
@@ -251,6 +254,7 @@ fun ResultDialogContentView(
         ) {
             Text(
                 text = "Result",
+                color = Color.White
             )
             Card(
                 modifier = Modifier
@@ -289,5 +293,14 @@ fun PreviewManageMoneyView(){
     ManageMoneyView(
         onBackPressed = {},
         onDismissResultDialog = {}
+    )
+}
+
+@Preview
+@Composable
+fun PreviewBudgetResultDialogView(){
+    ResultDialogContentView(
+        onOkClicked = {},
+        budget = 10000
     )
 }

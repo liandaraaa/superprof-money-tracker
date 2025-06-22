@@ -11,7 +11,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -21,6 +23,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,6 +46,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -137,7 +142,9 @@ fun MainView(
     onClickNewPlan:()->Unit,
     onDateClickListener: (planId:Int, selectedDate:String) -> Unit
 ){
-    val moneyPlansWithExpenses = remember { mutableStateListOf(MoneyPlanWithExpenses()) }
+    val moneyPlansWithExpenses = remember { mutableStateListOf(MoneyPlanWithExpenses(
+        plan = MoneyPlan(id = null)
+    )) }
     val  uiState = remember { mutableStateOf(CalendarUiState.Init) }
 
     val db: MoneyPlanDatabase = databaseBuilder(
@@ -151,7 +158,10 @@ fun MainView(
         CoroutineScope(Dispatchers.Main).launch {
             try {
                 val plans = async { db.moneyPlanDao().getALlMoneyPlanWithExpenses() }.await()
+                moneyPlansWithExpenses.clear()
                 moneyPlansWithExpenses.addAll(plans)
+                Log.d("TEST_PROGRAM","get all plans from db $plans")
+                Log.d("TEST_PROGRAM","get all plans expesense $plans")
                 uiState.value = CalendarUiState(
                     yearMonth = YearMonth.now(),
                     dates = getDates(YearMonth.now(),plans)
@@ -191,18 +201,38 @@ fun MainView(
                 ))
         },
         bottomBar = {
-            Button(
-                enabled = moneyPlansWithExpenses.any { it.plan.id == null } || moneyPlansWithExpenses.map { it.plan }.find { it.status == MoneyPlanStatus.PENDING.name } != null,
-                onClick = {
-                   onClickNewPlan()
-                },
+            Column (
                 modifier = Modifier
                     .padding(16.dp)
-                    .fillMaxWidth()
-            ) {
-                Text(
-                    text = "Buat Perencanaan Baru !"
-                )
+            ){
+                val isEnableButton = if(moneyPlansWithExpenses.any { it.plan.id == null}){
+                    Log.d("TEST_PROGRAM", "cek is have plan.id null $moneyPlansWithExpenses.any { it.plan.id == null")
+                    true
+                }else{
+                    val isEnable = moneyPlansWithExpenses.map { it.plan }.find { it.status == MoneyPlanStatus.PENDING.name } == null
+                    Log.d("TEST_PROGRAM", "cek isEnbale $isEnable")
+                    isEnable
+                }
+                val isShowWarningTextNewPlan = moneyPlansWithExpenses.any { it.plan.id != null} && !isEnableButton
+                if( isShowWarningTextNewPlan){
+                    Text(
+                        fontSize = 11.sp,
+                        text = "Kamu tidak dapat membuat perencanaan baru sebelum menyelesaikan rencana sebelumnya"
+                    )
+                }
+                Button(
+                    enabled = isEnableButton,
+                    onClick = {
+                        onClickNewPlan()
+                    },
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Buat Perencanaan Baru !"
+                    )
+                }
             }
         }
     ) { padding ->
@@ -212,7 +242,8 @@ fun MainView(
                 .verticalScroll(rememberScrollState())
                 .padding(padding)
         ) {
-            if(moneyPlansWithExpenses.isNotEmpty()){
+            Log.d("TEST_PROGRAM","show mainView : $moneyPlansWithExpenses")
+            if(moneyPlansWithExpenses.any { it.plan.id != null }){
                 Log.d("TEST_PROGRAM","show calendar widget $moneyPlansWithExpenses")
                 CalendarWidget(
                     days = DateUtil.daysOfWeek,
@@ -225,26 +256,40 @@ fun MainView(
                     onSelectedMonth = {yearMonth -> toSelectedMonth(yearMonth) }
                 )
             }else{
-                EmptyPlanView()
+                EmptyPlanView(padding)
             }
         }
     }
 }
 
 @Composable
-fun EmptyPlanView(){
-    Image(
-        painter = painterResource(id = R.drawable.ops),
-        contentDescription = "Empty illustration",
-        modifier = Modifier
-            .padding(top = 100.dp)
-    )
+fun EmptyPlanView(padding: PaddingValues){
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_warning),
+                contentDescription = "empty plan",
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+            )
+            Text(
+                text = "Ops! Kamu belum membuat perencanaan apapun",
+                modifier = Modifier.padding(16.dp)
+                    .align(Alignment.CenterHorizontally)
+            )
+        }
 }
 
 @Preview
 @Composable
 fun PreviewEmptyPlanView() {
-    EmptyPlanView()
+    EmptyPlanView(
+        padding = PaddingValues(16.dp)
+    )
 }
 
 @Composable
