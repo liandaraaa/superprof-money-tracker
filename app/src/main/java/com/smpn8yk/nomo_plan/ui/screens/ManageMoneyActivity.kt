@@ -4,13 +4,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -34,21 +28,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.room.Room.databaseBuilder
-import com.smpn8yk.nomo_plan.R
 import com.smpn8yk.nomo_plan.data.MoneyPlan
-import com.smpn8yk.nomo_plan.data.MoneyPlanStatus
 import com.smpn8yk.nomo_plan.db.MoneyPlanDatabase
-import com.smpn8yk.nomo_plan.ui.theme.CoklatKayu
-import com.smpn8yk.nomo_plan.ui.theme.IjoBg
 import com.smpn8yk.nomo_plan.ui.theme.IjoDaun
-import com.smpn8yk.nomo_plan.ui.theme.IjoYes
-import com.smpn8yk.nomo_plan.ui.theme.Krem
 import com.smpn8yk.nomo_plan.ui.theme.NomoPlanTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -101,7 +87,7 @@ class ManageMoneyActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManageMoneyView(
-    onBackPressed:()->Unit,
+    onBackPressed: () -> Unit,
     onDismissResultDialog: (moneyPlan: MoneyPlan) -> Unit
 ) {
     val showResultDialog = remember { mutableStateOf(false) }
@@ -135,17 +121,21 @@ fun ManageMoneyView(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(
-                    text =  "Manage Your Money"
-                ) },
+                title = {
+                    Text(
+                        text = "Manage Your Money",
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                },
                 colors = TopAppBarDefaults.mediumTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 navigationIcon = {
                     IconButton(onClick = { onBackPressed() }) {
                         Icon(
                             imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 }
@@ -166,7 +156,7 @@ fun ManageMoneyView(
                 )
             }
         }
-    ){paddingValues ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .padding(paddingValues)
@@ -289,7 +279,7 @@ fun ResultDialogContentView(
 
 @Preview
 @Composable
-fun PreviewManageMoneyView(){
+fun PreviewManageMoneyView() {
     ManageMoneyView(
         onBackPressed = {},
         onDismissResultDialog = {}
@@ -298,7 +288,7 @@ fun PreviewManageMoneyView(){
 
 @Preview
 @Composable
-fun PreviewBudgetResultDialogView(){
+fun PreviewBudgetResultDialogView() {
     ResultDialogContentView(
         onOkClicked = {},
         budget = 10000

@@ -1,4 +1,5 @@
 package com.smpn8yk.nomo_plan
+
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -13,7 +14,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -23,8 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,7 +36,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,13 +43,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.room.Room.databaseBuilder
 import com.smpn8yk.nomo_plan.data.CalendarUiState
-import com.smpn8yk.nomo_plan.data.Expense
 import com.smpn8yk.nomo_plan.data.ExpenseReportStatus
 import com.smpn8yk.nomo_plan.data.MoneyPlan
 import com.smpn8yk.nomo_plan.data.MoneyPlanStatus
@@ -63,12 +58,9 @@ import com.smpn8yk.nomo_plan.ui.screens.DailyTrackerExpenseActivity
 import com.smpn8yk.nomo_plan.ui.screens.ManageMoneyActivity
 import com.smpn8yk.nomo_plan.ui.theme.Abu
 import com.smpn8yk.nomo_plan.ui.theme.CoklatKayu
-import com.smpn8yk.nomo_plan.ui.theme.IjoBg
-import com.smpn8yk.nomo_plan.ui.theme.IjoDaun
 import com.smpn8yk.nomo_plan.ui.theme.IjoYes
 import com.smpn8yk.nomo_plan.ui.theme.MerahNo
 import com.smpn8yk.nomo_plan.ui.theme.NomoPlanTheme
-import com.smpn8yk.nomo_plan.ui.theme.Pink80
 import com.smpn8yk.nomo_plan.utils.DateUtil
 import com.smpn8yk.nomo_plan.utils.getDates
 import com.smpn8yk.nomo_plan.utils.getDisplayName
@@ -79,7 +71,7 @@ import kotlinx.coroutines.launch
 import java.time.YearMonth
 
 
-class MainActivity : ComponentActivity(){
+class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,8 +84,8 @@ class MainActivity : ComponentActivity(){
                     onClickNewPlan = {
                         navigateToManageMoneyActivity()
                     },
-                    onDateClickListener = {planId,selectedDate->
-                        navigateToDailyTrackerExpenseActivity(planId,selectedDate)
+                    onDateClickListener = { planId, selectedDate ->
+                        navigateToDailyTrackerExpenseActivity(planId, selectedDate)
                     }
                 )
             }
@@ -104,7 +96,7 @@ class MainActivity : ComponentActivity(){
     override fun onResume() {
         super.onResume()
         Log.d("TEST_PROGRAM", "coba panggil onResume")
-        }
+    }
 
     override fun onPause() {
         super.onPause()
@@ -121,15 +113,15 @@ class MainActivity : ComponentActivity(){
         Log.d("TEST_PROGRAM", "coba panggil onDestroy")
     }
 
-    private fun navigateToManageMoneyActivity(){
-        startActivity(Intent(this,ManageMoneyActivity::class.java))
+    private fun navigateToManageMoneyActivity() {
+        startActivity(Intent(this, ManageMoneyActivity::class.java))
     }
 
-    private fun navigateToDailyTrackerExpenseActivity(planId:Int, selectedDate:String){
+    private fun navigateToDailyTrackerExpenseActivity(planId: Int, selectedDate: String) {
         val intent = Intent(this, DailyTrackerExpenseActivity::class.java)
-        intent.putExtra("EXTRA_PLAN_ID",planId)
-        intent.putExtra("EXTRA_DATE",selectedDate)
-        Log.d("TEST_PROGRAM", "navigate daily date $planId" )
+        intent.putExtra("EXTRA_PLAN_ID", planId)
+        intent.putExtra("EXTRA_DATE", selectedDate)
+        Log.d("TEST_PROGRAM", "navigate daily date $planId")
         startActivity(intent)
     }
 
@@ -138,14 +130,18 @@ class MainActivity : ComponentActivity(){
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainView(
-    context:Context,
-    onClickNewPlan:()->Unit,
-    onDateClickListener: (planId:Int, selectedDate:String) -> Unit
-){
-    val moneyPlansWithExpenses = remember { mutableStateListOf(MoneyPlanWithExpenses(
-        plan = MoneyPlan(id = null)
-    )) }
-    val  uiState = remember { mutableStateOf(CalendarUiState.Init) }
+    context: Context,
+    onClickNewPlan: () -> Unit,
+    onDateClickListener: (planId: Int, selectedDate: String) -> Unit
+) {
+    val moneyPlansWithExpenses = remember {
+        mutableStateListOf(
+            MoneyPlanWithExpenses(
+                plan = MoneyPlan(id = null)
+            )
+        )
+    }
+    val uiState = remember { mutableStateOf(CalendarUiState.Init) }
 
     val db: MoneyPlanDatabase = databaseBuilder(
         context,
@@ -154,40 +150,43 @@ fun MainView(
     ).allowMainThreadQueries()
         .build()
 
-    fun checkMoneyPlanExist(){
+    fun checkMoneyPlanExist() {
         CoroutineScope(Dispatchers.Main).launch {
             try {
                 val plans = async { db.moneyPlanDao().getALlMoneyPlanWithExpenses() }.await()
                 moneyPlansWithExpenses.clear()
                 moneyPlansWithExpenses.addAll(plans)
-                Log.d("TEST_PROGRAM","get all plans from db $plans")
-                Log.d("TEST_PROGRAM","get all plans expesense $plans")
+                Log.d("TEST_PROGRAM", "get all plans from db $plans")
+                Log.d("TEST_PROGRAM", "get all plans expesense $plans")
                 uiState.value = CalendarUiState(
                     yearMonth = YearMonth.now(),
-                    dates = getDates(YearMonth.now(),plans)
+                    dates = getDates(YearMonth.now(), plans)
                 )
                 return@launch
-            }catch (e:Exception){
+            } catch (e: Exception) {
                 return@launch
             }
         }
     }
 
     fun toSelectedMonth(currentMonth: YearMonth) {
-        Log.d("TEST_PROGRAM","select current month $currentMonth")
+        Log.d("TEST_PROGRAM", "select current month $currentMonth")
         uiState.value = CalendarUiState(
             yearMonth = currentMonth,
-            dates = getDates(currentMonth,moneyPlansWithExpenses)
+            dates = getDates(currentMonth, moneyPlansWithExpenses)
         )
     }
 
     MyEventListener {
         when (it) {
             Lifecycle.Event.ON_RESUME -> {
-                Log.d("TEST_PROGRAM", "cek on resume lifecycle" +
-                        "")
+                Log.d(
+                    "TEST_PROGRAM", "cek on resume lifecycle" +
+                            ""
+                )
                 checkMoneyPlanExist()
             }
+
             else -> {}
         }
     }
@@ -195,26 +194,37 @@ fun MainView(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(id = R.string.app_name)) },
+                title = {
+                    Text(
+                        text = stringResource(id = R.string.app_name),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                },
                 colors = TopAppBarDefaults.mediumTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                ))
+                    containerColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            )
         },
         bottomBar = {
-            Column (
+            Column(
                 modifier = Modifier
                     .padding(16.dp)
-            ){
-                val isEnableButton = if(moneyPlansWithExpenses.any { it.plan.id == null}){
-                    Log.d("TEST_PROGRAM", "cek is have plan.id null $moneyPlansWithExpenses.any { it.plan.id == null")
+            ) {
+                val isEnableButton = if (moneyPlansWithExpenses.any { it.plan.id == null }) {
+                    Log.d(
+                        "TEST_PROGRAM",
+                        "cek is have plan.id null $moneyPlansWithExpenses.any { it.plan.id == null"
+                    )
                     true
-                }else{
-                    val isEnable = moneyPlansWithExpenses.map { it.plan }.find { it.status == MoneyPlanStatus.PENDING.name } == null
+                } else {
+                    val isEnable = moneyPlansWithExpenses.map { it.plan }
+                        .find { it.status == MoneyPlanStatus.PENDING.name } == null
                     Log.d("TEST_PROGRAM", "cek isEnbale $isEnable")
                     isEnable
                 }
-                val isShowWarningTextNewPlan = moneyPlansWithExpenses.any { it.plan.id != null} && !isEnableButton
-                if( isShowWarningTextNewPlan){
+                val isShowWarningTextNewPlan =
+                    moneyPlansWithExpenses.any { it.plan.id != null } && !isEnableButton
+                if (isShowWarningTextNewPlan) {
                     Text(
                         fontSize = 11.sp,
                         text = "Kamu tidak dapat membuat perencanaan baru sebelum menyelesaikan rencana sebelumnya"
@@ -242,20 +252,21 @@ fun MainView(
                 .verticalScroll(rememberScrollState())
                 .padding(padding)
         ) {
-            Log.d("TEST_PROGRAM","show mainView : $moneyPlansWithExpenses")
-            if(moneyPlansWithExpenses.any { it.plan.id != null }){
-                Log.d("TEST_PROGRAM","show calendar widget $moneyPlansWithExpenses")
+            Log.d("TEST_PROGRAM", "show mainView : $moneyPlansWithExpenses")
+            if (moneyPlansWithExpenses.any { it.plan.id != null }) {
+                Log.d("TEST_PROGRAM", "show calendar widget $moneyPlansWithExpenses")
                 CalendarWidget(
                     days = DateUtil.daysOfWeek,
-                    onDateClickListener = { date->
-                        val currentMoneyPlan  = moneyPlansWithExpenses.map { it.plan }.find { it.range_dates.contains(date.dateFormat) }
-                        Log.d("TEST_PROGRAM","cek current moneyplan $currentMoneyPlan")
+                    onDateClickListener = { date ->
+                        val currentMoneyPlan = moneyPlansWithExpenses.map { it.plan }
+                            .find { it.range_dates.contains(date.dateFormat) }
+                        Log.d("TEST_PROGRAM", "cek current moneyplan $currentMoneyPlan")
                         onDateClickListener(currentMoneyPlan?.id ?: 0, date.dateFormat)
                     },
                     uiState = uiState.value,
-                    onSelectedMonth = {yearMonth -> toSelectedMonth(yearMonth) }
+                    onSelectedMonth = { yearMonth -> toSelectedMonth(yearMonth) }
                 )
-            }else{
+            } else {
                 EmptyPlanView(padding)
             }
         }
@@ -263,25 +274,26 @@ fun MainView(
 }
 
 @Composable
-fun EmptyPlanView(padding: PaddingValues){
-        Column(
+fun EmptyPlanView(padding: PaddingValues) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding),
+        verticalArrangement = Arrangement.Center
+    ) {
+        Image(
+            painter = painterResource(R.drawable.ic_warning),
+            contentDescription = "empty plan",
             modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            verticalArrangement = Arrangement.Center
-        ) {
-            Image(
-                painter = painterResource(R.drawable.ic_warning),
-                contentDescription = "empty plan",
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-            )
-            Text(
-                text = "Ops! Kamu belum membuat perencanaan apapun",
-                modifier = Modifier.padding(16.dp)
-                    .align(Alignment.CenterHorizontally)
-            )
-        }
+                .align(Alignment.CenterHorizontally)
+        )
+        Text(
+            text = "Ops! Kamu belum membuat perencanaan apapun",
+            modifier = Modifier
+                .padding(16.dp)
+                .align(Alignment.CenterHorizontally)
+        )
+    }
 }
 
 @Preview
@@ -297,7 +309,7 @@ fun CalendarWidget(
     days: Array<String>,
     onDateClickListener: (CalendarUiState.Date) -> Unit,
     uiState: CalendarUiState,
-    onSelectedMonth:(YearMonth)->Unit
+    onSelectedMonth: (YearMonth) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -312,10 +324,10 @@ fun CalendarWidget(
         }
         Header(
             yearMonth = uiState.yearMonth,
-            onPreviousMonthButtonClicked = {yearMonth ->
+            onPreviousMonthButtonClicked = { yearMonth ->
                 onSelectedMonth(yearMonth)
             },
-            onNextMonthButtonClicked = {yearMonth ->
+            onNextMonthButtonClicked = { yearMonth ->
                 onSelectedMonth(yearMonth)
             },
         )
@@ -376,7 +388,7 @@ fun DayItem(day: String, modifier: Modifier = Modifier) {
 
 @Composable
 fun Content(
-    dates:List<CalendarUiState.Date>,
+    dates: List<CalendarUiState.Date>,
     onDateClickListener: (CalendarUiState.Date) -> Unit,
 ) {
     Column {
@@ -423,7 +435,7 @@ fun ContentItem(
             modifier = Modifier
                 .align(Alignment.Center)
                 .padding(10.dp),
-            color = when(date.status){
+            color = when (date.status) {
                 ExpenseReportStatus.EMPTY.name -> CoklatKayu
                 ExpenseReportStatus.SUCCESS.name -> IjoYes
                 ExpenseReportStatus.FAILED.name -> MerahNo
@@ -435,11 +447,11 @@ fun ContentItem(
 
 @Preview
 @Composable
-fun PreviewCalendarPlanView(){
+fun PreviewCalendarPlanView() {
     CalendarWidget(
         days = DateUtil.daysOfWeek,
-        onDateClickListener = { date->
-            Log.d("TEST_PROGRAM","Select date $date")
+        onDateClickListener = { date ->
+            Log.d("TEST_PROGRAM", "Select date $date")
         },
         uiState = CalendarUiState.Init,
         onSelectedMonth = {}

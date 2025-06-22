@@ -31,7 +31,8 @@
         </activity>
         <activity
             android:name=".ui.screens.ManageMoneyActivity"
-            android:enabled="true" />
+            android:enabled="true"
+            android:theme="@style/Theme.NomoPlan"/>
     </application>
 
 </manifest>
