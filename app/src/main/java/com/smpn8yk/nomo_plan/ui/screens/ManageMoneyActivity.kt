@@ -7,28 +7,46 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.room.Room.databaseBuilder
+import com.smpn8yk.nomo_plan.R
 import com.smpn8yk.nomo_plan.data.MoneyPlan
+import com.smpn8yk.nomo_plan.data.MoneyPlanStatus
 import com.smpn8yk.nomo_plan.db.MoneyPlanDatabase
 import com.smpn8yk.nomo_plan.ui.theme.CoklatKayu
 import com.smpn8yk.nomo_plan.ui.theme.IjoBg
+import com.smpn8yk.nomo_plan.ui.theme.Krem
+import com.smpn8yk.nomo_plan.ui.theme.NomoPlanTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -47,19 +65,24 @@ class ManageMoneyActivity : ComponentActivity() {
         ).build()
 
         setContent {
-            ManageMoneyView(
-                onDismissResultDialog = { moneyPlan ->
-                    CoroutineScope(Dispatchers.IO).launch {
-                        try {
-                            async { savePlan(db, moneyPlan) }.await()
-                            Log.d("TEST_PROGRAM", "Success saving plan..")
-                            backToMainActivity()
-                        } catch (e: Exception) {
-                            Log.d("TEST_PROGRAM", "Error saving plan ${e.message}")
+            NomoPlanTheme {
+                ManageMoneyView(
+                    onBackPressed = {
+                        finish()
+                    },
+                    onDismissResultDialog = { moneyPlan ->
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                async { savePlan(db, moneyPlan) }.await()
+                                Log.d("TEST_PROGRAM", "Success saving plan..")
+                                backToMainActivity()
+                            } catch (e: Exception) {
+                                Log.d("TEST_PROGRAM", "Error saving plan ${e.message}")
+                            }
                         }
                     }
-                }
-            )
+                )
+            }
         }
     }
 
@@ -72,8 +95,10 @@ class ManageMoneyActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManageMoneyView(
+    onBackPressed:()->Unit,
     onDismissResultDialog: (moneyPlan: MoneyPlan) -> Unit
 ) {
     val showResultDialog = remember { mutableStateOf(false) }
@@ -104,24 +129,44 @@ fun ManageMoneyView(
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CoklatKayu)
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "Manage Your Money",
-            modifier = Modifier
-                .padding(bottom = 16.dp)
-                .align(Alignment.CenterHorizontally)
-        )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(
+                    text =  "Manage Your Money"
+                ) },
+                colors = TopAppBarDefaults.mediumTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ),
+                navigationIcon = {
+                    IconButton(onClick = { onBackPressed() }) {
+                        Icon(
+                            imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
+            )
+        },
+        bottomBar = {
+            Button(
+                onClick = {
+                    budget.intValue = calculateBudget(days.intValue, nominal.intValue)
+                    showResultDialog.value = true
+                },
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = "Submit"
+                )
+            }
+        }
+    ){paddingValues ->
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.9f),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(paddingValues)
         ) {
             OutlinedTextField(
                 value = days.intValue.toString(),
@@ -138,7 +183,7 @@ fun ManageMoneyView(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                    .padding(16.dp),
             )
             OutlinedTextField(
                 value = nominal.intValue.toString(),
@@ -155,10 +200,9 @@ fun ManageMoneyView(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp)
+                    .padding(16.dp)
             )
         }
-
         ResultDialogView(
             showDialog = showResultDialog.value,
             onDimmis = {
@@ -167,20 +211,6 @@ fun ManageMoneyView(
             },
             budget = budget.intValue
         )
-        Button(
-            onClick = {
-                budget.intValue = calculateBudget(days.intValue, nominal.intValue)
-                showResultDialog.value = true
-            },
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth()
-                .align(Alignment.CenterHorizontally)
-        ) {
-            Text(
-                text = "Submit"
-            )
-        }
     }
 }
 
@@ -200,7 +230,6 @@ fun ResultDialogView(
             )
         }
     }
-
 }
 
 
@@ -252,4 +281,13 @@ fun ResultDialogContentView(
             }
         }
     }
+}
+
+@Preview
+@Composable
+fun PreviewManageMoneyView(){
+    ManageMoneyView(
+        onBackPressed = {},
+        onDismissResultDialog = {}
+    )
 }

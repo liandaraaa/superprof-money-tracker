@@ -189,17 +189,30 @@ fun MainView(
                 colors = TopAppBarDefaults.mediumTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 ))
+        },
+        bottomBar = {
+            Button(
+                enabled = moneyPlansWithExpenses.any { it.plan.id == null } || moneyPlansWithExpenses.map { it.plan }.find { it.status == MoneyPlanStatus.PENDING.name } != null,
+                onClick = {
+                   onClickNewPlan()
+                },
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = "Buat Perencanaan Baru !"
+                )
+            }
         }
     ) { padding ->
-
         Surface(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(padding)
         ) {
-
-            if(moneyPlansWithExpenses.any { it.plan.id != null }){
+            if(moneyPlansWithExpenses.isNotEmpty()){
                 Log.d("TEST_PROGRAM","show calendar widget $moneyPlansWithExpenses")
                 CalendarWidget(
                     days = DateUtil.daysOfWeek,
@@ -212,52 +225,26 @@ fun MainView(
                     onSelectedMonth = {yearMonth -> toSelectedMonth(yearMonth) }
                 )
             }else{
-                EmptyPlanView {
-                    onClickNewPlan()
-                }
+                EmptyPlanView()
             }
         }
     }
 }
 
 @Composable
-fun EmptyPlanView(
-    onNewPlanClicked:()->Unit)
-{
-    Column (modifier = Modifier
-        .fillMaxSize()
-        .background(IjoBg),
-        verticalArrangement = Arrangement.SpaceBetween
-    ){
-        Image(
-            painter = painterResource(id = R.drawable.ops),
-            contentDescription = "Empty illustration",
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .padding(top = 100.dp)
-        )
-        Button(
-            onClick = {
-                    onNewPlanClicked()
-                },
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth()
-                    .align(Alignment.CenterHorizontally)
-        ) {
-            Text("Buat Perencanaan Baru !")
-        }
-    }
+fun EmptyPlanView(){
+    Image(
+        painter = painterResource(id = R.drawable.ops),
+        contentDescription = "Empty illustration",
+        modifier = Modifier
+            .padding(top = 100.dp)
+    )
 }
 
 @Preview
 @Composable
 fun PreviewEmptyPlanView() {
-    EmptyPlanView(
-        {
-            Log.d("TEST_PROGRAM", "Navigate to manage money")
-        }
-    )
+    EmptyPlanView()
 }
 
 @Composable

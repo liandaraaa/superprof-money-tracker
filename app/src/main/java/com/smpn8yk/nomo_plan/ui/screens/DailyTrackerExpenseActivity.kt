@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -71,7 +72,10 @@ class DailyTrackerExpenseActivity : ComponentActivity() {
                 DailyTrackerExpenseView(
                     context = this,
                     currentPlanId = currentPlanId,
-                    selectedDate = selectedDate.orEmpty()
+                    selectedDate = selectedDate.orEmpty(),
+                    onBackPressed = {
+                        finish()
+                    }
                 )
             }
         }
@@ -83,7 +87,8 @@ class DailyTrackerExpenseActivity : ComponentActivity() {
 fun DailyTrackerExpenseView(
     context: Context,
     currentPlanId: Int,
-    selectedDate: String
+    selectedDate: String,
+    onBackPressed:()->Unit
 ) {
 
     val plansExpenses = remember {
@@ -172,7 +177,16 @@ fun DailyTrackerExpenseView(
                     Row {
                         Text("Daily Expenses Report")
                     }
-                })
+                },
+                navigationIcon = {
+                    IconButton(onClick = { onBackPressed() }) {
+                        Icon(
+                            imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
+            )
         },
         floatingActionButton = {
            if (currentExpenses?.find { it.report_status == ExpenseReportStatus.EMPTY.name } != null){
@@ -239,7 +253,7 @@ fun NoMoneyPlanView(padding: PaddingValues) {
             .padding(padding)
     ) {
         Column(
-            modifier = Modifier.padding(8.dp)
+            modifier = Modifier.padding(16.dp)
         ) {
             Text(
                 text = "Ops! Kamu belum dapat membuat pengeluaran",
@@ -260,7 +274,7 @@ fun EmptyMoneyPlanView(padding: PaddingValues) {
             .padding(padding)
     ) {
         Column(
-            modifier = Modifier.padding(8.dp)
+            modifier = Modifier.padding(16.dp)
         ) {
             Text(
                 text = "Pengeluaranmu hari ini masih kosong",
