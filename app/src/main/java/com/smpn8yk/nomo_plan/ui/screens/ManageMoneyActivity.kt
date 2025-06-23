@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -28,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -163,8 +165,9 @@ fun ManageMoneyView(
         ) {
             OutlinedTextField(
                 value = days.intValue.toString(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 onValueChange = { value ->
-                    if (value.isNotEmpty()) {
+                    if (value.isNotEmpty() && value.all { it.isDigit() }) {
                         days.intValue = value.toInt()
                     }
                 },
@@ -180,8 +183,9 @@ fun ManageMoneyView(
             )
             OutlinedTextField(
                 value = nominal.intValue.toString(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 onValueChange = { value ->
-                    if (value.isNotEmpty()) {
+                    if (value.isNotEmpty() && value.all { it.isDigit() }) {
                         nominal.intValue = value.toInt()
                     }
                 },
