@@ -21,7 +21,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.smpn8yk.nomo_plan.MainActivity
 import com.smpn8yk.nomo_plan.R
 import com.smpn8yk.nomo_plan.ui.theme.Putih
 import java.util.Timer

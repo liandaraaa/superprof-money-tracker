@@ -5,28 +5,20 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MoneyPlanDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(moneyPlan: MoneyPlan)
 
-    @Query("Select * From moneyPlan Where id = :id")
-    suspend fun getMoneyPlanById(id: Int): MoneyPlan?
-
-    @Query("DELETE FROM moneyPlan WHERE id = :id")
-    suspend fun deleteMoneyPlanById(id: Int)
-
-    @Query("SELECT * FROM moneyPlan")
-    suspend fun getAlLMoneyPlans(): List<MoneyPlan>
-
     @Transaction
     @Query("SELECT * FROM moneyplan Where id = :id")
-    fun getMoneyPlanWithExpenses(id: Int): MoneyPlanWithExpenses?
+    fun getMoneyPlanWithExpenses(id: Int): Flow<MoneyPlanWithExpenses>?
 
     @Transaction
     @Query("SELECT * FROM moneyplan")
-    fun getALlMoneyPlanWithExpenses(): List<MoneyPlanWithExpenses>
+    fun getALlMoneyPlanWithExpenses(): Flow<List<MoneyPlanWithExpenses>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertExpense(expense: Expense)
