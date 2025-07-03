@@ -1,9 +1,9 @@
 package com.smpn8yk.nomo_plan.ui.screens.managemoney
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -23,6 +23,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,52 +35,31 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.room.Room.databaseBuilder
 import com.smpn8yk.nomo_plan.data.local.entity.MoneyPlan
-import com.smpn8yk.nomo_plan.data.db.MoneyPlanDatabase
 import com.smpn8yk.nomo_plan.ui.theme.IjoDaun
 import com.smpn8yk.nomo_plan.ui.theme.NomoPlanTheme
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
+import com.smpn8yk.nomo_plan.ui.viewmodels.ManageMoneyViewModel
+import dagger.hilt.android.AndroidEntryPoint
 import java.time.LocalDate
 
+@AndroidEntryPoint
 class ManageMoneyActivity : ComponentActivity() {
+
+    private val manageMoneyViewModel by viewModels<ManageMoneyViewModel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val db: MoneyPlanDatabase = databaseBuilder<MoneyPlanDatabase>(
-            applicationContext,
-            MoneyPlanDatabase::class.java,
-            "moneyplan-database"
-        ).build()
-
         setContent {
             NomoPlanTheme {
                 ManageMoneyView(
+                    viewModel = manageMoneyViewModel,
                     onBackPressed = {
-                        finish()
-                    },
-                    onDismissResultDialog = { moneyPlan ->
-                        CoroutineScope(Dispatchers.IO).launch {
-                            try {
-                                async { savePlan(db, moneyPlan) }.await()
-                                Log.d("TEST_PROGRAM", "Success saving plan..")
-                                backToMainActivity()
-                            } catch (e: Exception) {
-                                Log.d("TEST_PROGRAM", "Error saving plan ${e.message}")
-                            }
-                        }
+                        backToMainActivity()
                     }
                 )
             }
         }
-    }
-
-    private suspend fun savePlan(db: MoneyPlanDatabase, moneyPlan: MoneyPlan) {
-        db.moneyPlanDao().insert(moneyPlan)
     }
 
     private fun backToMainActivity() {
@@ -89,9 +70,10 @@ class ManageMoneyActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManageMoneyView(
-    onBackPressed: () -> Unit,
-    onDismissResultDialog: (moneyPlan: MoneyPlan) -> Unit
+    viewModel: ManageMoneyViewModel,
+    onBackPressed: () -> Unit
 ) {
+    val manageMoneyUiState by viewModel.manageMoneyUiState.collectAsState()
     val showResultDialog = remember { mutableStateOf(false) }
 
     val days = remember { mutableIntStateOf(0) }
@@ -118,6 +100,10 @@ fun ManageMoneyView(
             budget = budget.intValue,
             range_dates = getRangeDates()
         )
+    }
+
+    if(manageMoneyUiState == "COMPLETED"){
+        onBackPressed()
     }
 
     Scaffold(
@@ -199,12 +185,15 @@ fun ManageMoneyView(
                     .fillMaxWidth()
                     .padding(16.dp)
             )
+            Text(
+                text = manageMoneyUiState
+            )
         }
         ResultDialogView(
             showDialog = showResultDialog.value,
             onDimmis = {
                 showResultDialog.value = false
-                onDismissResultDialog(getMoneyPlan())
+                viewModel.savePlan(getMoneyPlan())
             },
             budget = budget.intValue
         )
@@ -279,15 +268,6 @@ fun ResultDialogContentView(
             }
         }
     }
-}
-
-@Preview
-@Composable
-fun PreviewManageMoneyView() {
-    ManageMoneyView(
-        onBackPressed = {},
-        onDismissResultDialog = {}
-    )
 }
 
 @Preview
