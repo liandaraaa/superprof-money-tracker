@@ -17,7 +17,7 @@ interface MoneyPlanDao {
 
     @Transaction
     @Query("SELECT * FROM moneyplan Where id = :id")
-    fun getMoneyPlanWithExpenses(id: Int): MoneyPlanWithExpenses?
+    fun getMoneyPlanWithExpenses(id: Int): Flow<MoneyPlanWithExpenses>?
 
     @Transaction
     @Query("SELECT * FROM moneyplan")

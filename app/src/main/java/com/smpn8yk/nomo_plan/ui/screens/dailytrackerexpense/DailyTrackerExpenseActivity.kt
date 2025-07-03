@@ -1,10 +1,10 @@
 package com.smpn8yk.nomo_plan.ui.screens.dailytrackerexpense
 
-import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -32,6 +32,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,37 +44,33 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.Lifecycle
-import androidx.room.Room.databaseBuilder
 import com.smpn8yk.nomo_plan.data.local.entity.Expense
 import com.smpn8yk.nomo_plan.data.local.entity.ExpenseReportStatus
 import com.smpn8yk.nomo_plan.data.local.entity.MoneyPlanStatus
-import com.smpn8yk.nomo_plan.data.local.entity.MoneyPlanWithExpenses
-import com.smpn8yk.nomo_plan.data.db.MoneyPlanDatabase
-import com.smpn8yk.nomo_plan.ui.MyEventListener
 import com.smpn8yk.nomo_plan.ui.theme.IjoYes
 import com.smpn8yk.nomo_plan.ui.theme.Krem
 import com.smpn8yk.nomo_plan.ui.theme.MerahNo
 import com.smpn8yk.nomo_plan.ui.theme.NomoPlanTheme
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
+import com.smpn8yk.nomo_plan.ui.viewmodels.DailyTrackerExpenseViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class DailyTrackerExpenseActivity : ComponentActivity() {
+
+    private val dailyTrackerExpenseViewModel by viewModels<DailyTrackerExpenseViewModel>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val currentPlanId = intent.getIntExtra("EXTRA_PLAN_ID", 0)
         val selectedDate = intent.getStringExtra("EXTRA_DATE")
 
-        Log.d("TEST_PROGRAM", "currentPlanId : $currentPlanId")
-        Log.d("TEST_PROGRAM", "selectedDate : $selectedDate")
+        dailyTrackerExpenseViewModel.setCurrentPlanId(currentPlanId)
 
         setContent {
             NomoPlanTheme {
                 DailyTrackerExpenseView(
-                    context = this,
+                    viewModel = dailyTrackerExpenseViewModel,
                     currentPlanId = currentPlanId,
                     selectedDate = selectedDate.orEmpty(),
                     onBackPressed = {
@@ -87,90 +85,44 @@ class DailyTrackerExpenseActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DailyTrackerExpenseView(
-    context: Context,
+    viewModel: DailyTrackerExpenseViewModel,
     currentPlanId: Int,
     selectedDate: String,
-    onBackPressed:()->Unit
+    onBackPressed: () -> Unit
 ) {
+    val plansExpenses by viewModel.currentMoneyPlanExpenses.collectAsState()
+    val saveExpenseUiState by viewModel.saveExpenseUiState.collectAsState()
+    val updateStatusExpenseUiState by viewModel.updateStatusExpenseUiState.collectAsState()
 
-    val plansExpenses = remember {
-        mutableStateOf<MoneyPlanWithExpenses?>(null)
-    }
     val showInputExpenseDialog = remember { mutableStateOf(false) }
     val showCompleteReportDialog = remember { mutableStateOf(false) }
 
     val disableCompleteButton = remember { mutableStateOf(false) }
 
     val currentExpenses =
-        plansExpenses.value?.expenses?.filter { it.date == selectedDate }
+        plansExpenses.expenses.filter { it.date == selectedDate }
 
     val isMoneyPlanInRangeDates =
-        plansExpenses.value?.plan?.range_dates?.find { it == selectedDate }
+        plansExpenses.plan.range_dates.find { it == selectedDate }
 
-    val db: MoneyPlanDatabase = databaseBuilder<MoneyPlanDatabase>(
-        context,
-        MoneyPlanDatabase::class.java,
-        "moneyplan-database"
-    ).build()
-
-    fun checkMoneyPlanExist() {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val moneyPlanWithExpenses =
-                    async { db.moneyPlanDao().getMoneyPlanWithExpenses(currentPlanId) }.await()
-                Log.d("TEST_PROGRAM", "check moneyPLanExpenses $moneyPlanWithExpenses")
-                plansExpenses.value = moneyPlanWithExpenses
-            } catch (e: Exception) {
-                Log.e("TEST_PROGRAM", "error to moneyPLanExpenses ${e.message}")
-            }
-        }
+    if (saveExpenseUiState == "COMPLETED") {
+        showInputExpenseDialog.value = false
     }
 
-    fun saveExpense(expense: Expense) {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                async { db.moneyPlanDao().insertExpense(expense) }.await()
-                Log.d("TEST_PROGRAM", "Success saving expense..")
-                showInputExpenseDialog.value = false
-                checkMoneyPlanExist()
-            } catch (e: Exception) {
-                Log.d("TEST_PROGRAM", "Error saving plan ${e.message}")
-            }
-        }
+    if (updateStatusExpenseUiState == "COMPLETED") {
+        showCompleteReportDialog.value = false
+        disableCompleteButton.value = true
     }
 
-    fun updatePlanStatus(selectedDate: String, isOverBudget: Boolean) {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val newExpenseReportStatus =
-                    if (isOverBudget) ExpenseReportStatus.FAILED.name else ExpenseReportStatus.SUCCESS.name
-                val newPlanStatus = MoneyPlanStatus.COMPLETE.name
-                async { db.moneyPlanDao().updateStatus(currentPlanId, newPlanStatus) }.await()
-                async {
-                    db.moneyPlanDao().updateReportStatus(selectedDate, newExpenseReportStatus)
-                }.await()
-                Log.d("TEST_PROGRAM", "Success update status..")
-                showCompleteReportDialog.value = false
-                disableCompleteButton.value = true
-                checkMoneyPlanExist()
-            } catch (e: Exception) {
-                Log.d("TEST_PROGRAM", "Error update status ${e.message}")
-            }
-        }
-    }
-
-
-    Log.d("TEST_PROGRAM", "get plan expenses $plansExpenses")
-
-    MyEventListener {
-        when (it) {
-            Lifecycle.Event.ON_RESUME -> {
-                checkMoneyPlanExist()
-            }
-
-            else -> {}
-        }
-    }
+//    MyEventListener {
+//        when (it) {
+//            Lifecycle.Event.ON_RESUME -> {
+//                checkMoneyPlanExist()
+//            }
+//
+//            else -> {}
+//        }
+//    }
 
     Scaffold(
         topBar = {
@@ -198,16 +150,16 @@ fun DailyTrackerExpenseView(
             )
         },
         floatingActionButton = {
-           if (isMoneyPlanInRangeDates !== null && (currentExpenses.isNullOrEmpty() || currentExpenses.find { it.report_status == ExpenseReportStatus.EMPTY.name } != null)){
-               FloatingActionButton(
-                   onClick = { showInputExpenseDialog.value = true },
-               ) {
-                   Icon(Icons.Filled.Add, "Floating action button.")
-               }
-           }
+            if (isMoneyPlanInRangeDates !== null && (currentExpenses.isEmpty() || currentExpenses.find { it.report_status == ExpenseReportStatus.EMPTY.name } != null)) {
+                FloatingActionButton(
+                    onClick = { showInputExpenseDialog.value = true },
+                ) {
+                    Icon(Icons.Filled.Add, "Floating action button.")
+                }
+            }
         },
         bottomBar = {
-            if(isMoneyPlanInRangeDates !== null){
+            if (isMoneyPlanInRangeDates !== null) {
                 Button(
                     enabled = !disableCompleteButton.value,
                     onClick = {
@@ -222,20 +174,29 @@ fun DailyTrackerExpenseView(
             }
         },
     ) { padding ->
-       if (plansExpenses.value == null || isMoneyPlanInRangeDates == null) {
+        if (isMoneyPlanInRangeDates == null) {
             NoMoneyPlanView(padding)
         } else {
-            disableCompleteButton.value = currentExpenses?.find { it.report_status == ExpenseReportStatus.EMPTY.name } == null
-            if (currentExpenses.isNullOrEmpty()) {
+            disableCompleteButton.value =
+                currentExpenses.find { it.report_status == ExpenseReportStatus.EMPTY.name } == null
+            if (currentExpenses.isEmpty()) {
                 EmptyMoneyPlanView(padding)
             } else {
                 MoneyPlanListView(padding, currentExpenses)
                 CompleteReportDialogView(
                     showDialog = showCompleteReportDialog.value,
                     onDismiss = { isOverBudget ->
-                        updatePlanStatus(selectedDate, isOverBudget)
+                        val newExpenseReportStatus =
+                            if (isOverBudget) ExpenseReportStatus.FAILED else ExpenseReportStatus.SUCCESS
+                        val newPlanStatus = MoneyPlanStatus.COMPLETE
+                        viewModel.updatePlanStatus(
+                            selectedDate = selectedDate,
+                            reportStatus = newExpenseReportStatus,
+                            planId = currentPlanId,
+                            status = newPlanStatus
+                        )
                     },
-                    currentBudget = plansExpenses.value?.plan?.budget ?: 0,
+                    currentBudget = plansExpenses.plan.budget,
                     currentPlanExpenses = currentExpenses
                 )
             }
@@ -243,7 +204,7 @@ fun DailyTrackerExpenseView(
                 showDialog = showInputExpenseDialog.value,
                 onDismiss = { expense ->
                     if (expense !== null) {
-                        saveExpense(expense)
+                        viewModel.saveExpense(expense)
                     } else {
                         showInputExpenseDialog.value = false
                     }
@@ -470,7 +431,7 @@ fun InputExpenseDialogContentView(
 
 @Preview
 @Composable
-fun PreviewInputExpenseContentViewDialog(){
+fun PreviewInputExpenseContentViewDialog() {
     InputExpenseDialogContentView(
         planId = 0,
         onDismiss = {},
@@ -483,7 +444,7 @@ fun PreviewInputExpenseContentViewDialog(){
 fun CompleteReportDialogView(
     showDialog: Boolean,
     onDismiss: (isOverBudget: Boolean) -> Unit,
-    currentBudget:Int,
+    currentBudget: Int,
     currentPlanExpenses: List<Expense>,
 ) {
     if (showDialog) {
@@ -503,7 +464,7 @@ fun CompleteReportDialogView(
 
 @Composable
 fun CompleteReportDialogContentView(
-    currentBudget:Int,
+    currentBudget: Int,
     currentPlanExpenses: List<Expense>,
     onOkClicked: (isOverBudget: Boolean) -> Unit
 ) {
@@ -514,7 +475,10 @@ fun CompleteReportDialogContentView(
         val totalExpenses =
             currentPlanExpenses.map { it.price }.reduce { acc, price -> acc + price }
         isOverBudget.value = totalExpenses > currentBudget
-        Log.d("TEST_PROGRAM","Cek reprot : $totalExpenses over budget $currentBudget result ${isOverBudget.value}")
+        Log.d(
+            "TEST_PROGRAM",
+            "Cek reprot : $totalExpenses over budget $currentBudget result ${isOverBudget.value}"
+        )
 
     }
 
@@ -522,7 +486,7 @@ fun CompleteReportDialogContentView(
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if(isOverBudget.value) MerahNo else IjoYes
+            containerColor = if (isOverBudget.value) MerahNo else IjoYes
         )
     ) {
         Column(
@@ -550,7 +514,7 @@ fun CompleteReportDialogContentView(
 
 @Preview
 @Composable
-fun PreviewCompleteReportContentDialogView(){
+fun PreviewCompleteReportContentDialogView() {
     CompleteReportDialogContentView(
         currentBudget = 0,
         currentPlanExpenses = listOf(),

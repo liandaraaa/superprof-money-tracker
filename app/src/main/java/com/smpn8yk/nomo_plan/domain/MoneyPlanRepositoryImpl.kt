@@ -14,7 +14,7 @@ class MoneyPlanRepositoryImpl @Inject constructor(
         return moneyPlanDao.insert(moneyPlan)
     }
 
-    override fun getMoneyPlanWithExpenses(id: Int): MoneyPlanWithExpenses? {
+    override fun getMoneyPlanWithExpenses(id: Int): Flow<MoneyPlanWithExpenses>? {
        return moneyPlanDao.getMoneyPlanWithExpenses(id)
     }
 

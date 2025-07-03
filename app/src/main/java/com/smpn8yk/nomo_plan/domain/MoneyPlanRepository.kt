@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 interface MoneyPlanRepository {
     suspend fun insertMoneyPlan(moneyPlan: MoneyPlan)
 
-    fun getMoneyPlanWithExpenses(id: Int): MoneyPlanWithExpenses?
+    fun getMoneyPlanWithExpenses(id: Int): Flow<MoneyPlanWithExpenses>?
 
     fun getALlMoneyPlanWithExpenses(): Flow<List<MoneyPlanWithExpenses>>
 
