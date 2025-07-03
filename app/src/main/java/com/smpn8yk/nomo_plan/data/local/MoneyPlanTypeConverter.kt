@@ -1,4 +1,4 @@
-package com.smpn8yk.nomo_plan.data
+package com.smpn8yk.nomo_plan.data.local
 
 import androidx.room.TypeConverter
 import com.google.gson.Gson

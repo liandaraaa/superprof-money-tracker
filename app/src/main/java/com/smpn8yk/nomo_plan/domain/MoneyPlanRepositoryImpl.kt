@@ -1,15 +1,20 @@
-package com.smpn8yk.nomo_plan.data
+package com.smpn8yk.nomo_plan.domain
 
+import com.smpn8yk.nomo_plan.data.local.MoneyPlanDao
+import com.smpn8yk.nomo_plan.data.local.entity.Expense
+import com.smpn8yk.nomo_plan.data.local.entity.MoneyPlan
+import com.smpn8yk.nomo_plan.data.local.entity.MoneyPlanWithExpenses
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
 
-class MoneyPlanRepositoryImpl(
+class MoneyPlanRepositoryImpl @Inject constructor(
     private val moneyPlanDao: MoneyPlanDao
-) : MoneyPlanRepository{
+) : MoneyPlanRepository {
     override suspend fun insertMoneyPlan(moneyPlan: MoneyPlan) {
         return moneyPlanDao.insert(moneyPlan)
     }
 
-    override fun getMoneyPlanWithExpenses(id: Int): Flow<MoneyPlanWithExpenses>? {
+    override fun getMoneyPlanWithExpenses(id: Int): MoneyPlanWithExpenses? {
        return moneyPlanDao.getMoneyPlanWithExpenses(id)
     }
 

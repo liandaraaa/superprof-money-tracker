@@ -1,11 +1,11 @@
-package com.smpn8yk.nomo_plan
+package com.smpn8yk.nomo_plan.ui.screens.main
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,9 +33,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,33 +44,28 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.Lifecycle
-import androidx.room.Room.databaseBuilder
+import com.smpn8yk.nomo_plan.R
 import com.smpn8yk.nomo_plan.data.CalendarUiState
-import com.smpn8yk.nomo_plan.data.ExpenseReportStatus
-import com.smpn8yk.nomo_plan.data.MoneyPlan
-import com.smpn8yk.nomo_plan.data.MoneyPlanStatus
-import com.smpn8yk.nomo_plan.data.MoneyPlanWithExpenses
-import com.smpn8yk.nomo_plan.db.MoneyPlanDatabase
-import com.smpn8yk.nomo_plan.ui.MyEventListener
-import com.smpn8yk.nomo_plan.ui.screens.DailyTrackerExpenseActivity
-import com.smpn8yk.nomo_plan.ui.screens.ManageMoneyActivity
+import com.smpn8yk.nomo_plan.data.local.entity.ExpenseReportStatus
+import com.smpn8yk.nomo_plan.data.local.entity.MoneyPlanStatus
+import com.smpn8yk.nomo_plan.ui.screens.dailytrackerexpense.DailyTrackerExpenseActivity
+import com.smpn8yk.nomo_plan.ui.screens.managemoney.ManageMoneyActivity
 import com.smpn8yk.nomo_plan.ui.theme.Abu
 import com.smpn8yk.nomo_plan.ui.theme.CoklatKayu
 import com.smpn8yk.nomo_plan.ui.theme.IjoYes
 import com.smpn8yk.nomo_plan.ui.theme.MerahNo
 import com.smpn8yk.nomo_plan.ui.theme.NomoPlanTheme
+import com.smpn8yk.nomo_plan.ui.viewmodels.MainViewModel
 import com.smpn8yk.nomo_plan.utils.DateUtil
-import com.smpn8yk.nomo_plan.utils.getDates
 import com.smpn8yk.nomo_plan.utils.getDisplayName
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
+import dagger.hilt.android.AndroidEntryPoint
 import java.time.YearMonth
 
-
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private val mainViewModel by viewModels<MainViewModel>()
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,7 +74,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             NomoPlanTheme {
                 MainView(
-                    context = this,
+                    viewModel = mainViewModel,
                     onClickNewPlan = {
                         navigateToManageMoneyActivity()
                     },
@@ -130,66 +124,26 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainView(
-    context: Context,
+    viewModel: MainViewModel,
     onClickNewPlan: () -> Unit,
     onDateClickListener: (planId: Int, selectedDate: String) -> Unit
 ) {
-    val moneyPlansWithExpenses = remember {
-        mutableStateListOf(
-            MoneyPlanWithExpenses(
-                plan = MoneyPlan(id = null)
-            )
-        )
-    }
-    val uiState = remember { mutableStateOf(CalendarUiState.Init) }
+    val moneyPlansWithExpenses by viewModel.moneyPlanUiState.collectAsState()
+    val uiState by viewModel.calendarUiState.collectAsState()
 
-    val db: MoneyPlanDatabase = databaseBuilder(
-        context,
-        MoneyPlanDatabase::class.java,
-        "moneyplan-database"
-    ).allowMainThreadQueries()
-        .build()
-
-    fun checkMoneyPlanExist() {
-        CoroutineScope(Dispatchers.Main).launch {
-            try {
-                val plans = async { db.moneyPlanDao().getALlMoneyPlanWithExpenses() }.await()
-                moneyPlansWithExpenses.clear()
-                moneyPlansWithExpenses.addAll(plans)
-                Log.d("TEST_PROGRAM", "get all plans from db $plans")
-                Log.d("TEST_PROGRAM", "get all plans expesense $plans")
-                uiState.value = CalendarUiState(
-                    yearMonth = YearMonth.now(),
-                    dates = getDates(YearMonth.now(), plans)
-                )
-                return@launch
-            } catch (e: Exception) {
-                return@launch
-            }
-        }
-    }
-
-    fun toSelectedMonth(currentMonth: YearMonth) {
-        Log.d("TEST_PROGRAM", "select current month $currentMonth")
-        uiState.value = CalendarUiState(
-            yearMonth = currentMonth,
-            dates = getDates(currentMonth, moneyPlansWithExpenses)
-        )
-    }
-
-    MyEventListener {
-        when (it) {
-            Lifecycle.Event.ON_RESUME -> {
-                Log.d(
-                    "TEST_PROGRAM", "cek on resume lifecycle" +
-                            ""
-                )
-                checkMoneyPlanExist()
-            }
-
-            else -> {}
-        }
-    }
+//    MyEventListener {
+//        when (it) {
+//            Lifecycle.Event.ON_RESUME -> {
+//                Log.d(
+//                    "TEST_PROGRAM", "cek on resume lifecycle" +
+//                            ""
+//                )
+//                checkMoneyPlanExist()
+//            }
+//
+//            else -> {}
+//        }
+//    }
 
     Scaffold(
         topBar = {
@@ -210,20 +164,20 @@ fun MainView(
                 modifier = Modifier
                     .padding(16.dp)
             ) {
-                val isEnableButton = if (moneyPlansWithExpenses.any { it.plan.id == null }) {
+                val isEnableButton = if (moneyPlansWithExpenses.plans.any { it.plan.id == null }) {
                     Log.d(
                         "TEST_PROGRAM",
                         "cek is have plan.id null $moneyPlansWithExpenses.any { it.plan.id == null"
                     )
                     true
                 } else {
-                    val isEnable = moneyPlansWithExpenses.map { it.plan }
+                    val isEnable = moneyPlansWithExpenses.plans.map { it.plan }
                         .find { it.status == MoneyPlanStatus.PENDING.name } == null
                     Log.d("TEST_PROGRAM", "cek isEnbale $isEnable")
                     isEnable
                 }
                 val isShowWarningTextNewPlan =
-                    moneyPlansWithExpenses.any { it.plan.id != null } && !isEnableButton
+                    moneyPlansWithExpenses.plans.any { it.plan.id != null } && !isEnableButton
                 if (isShowWarningTextNewPlan) {
                     Text(
                         fontSize = 11.sp,
@@ -253,18 +207,18 @@ fun MainView(
                 .padding(padding)
         ) {
             Log.d("TEST_PROGRAM", "show mainView : $moneyPlansWithExpenses")
-            if (moneyPlansWithExpenses.any { it.plan.id != null }) {
+            if (moneyPlansWithExpenses.plans.any { it.plan.id != null }) {
                 Log.d("TEST_PROGRAM", "show calendar widget $moneyPlansWithExpenses")
                 CalendarWidget(
                     days = DateUtil.daysOfWeek,
                     onDateClickListener = { date ->
-                        val currentMoneyPlan = moneyPlansWithExpenses.map { it.plan }
+                        val currentMoneyPlan = moneyPlansWithExpenses.plans.map { it.plan }
                             .find { it.range_dates.contains(date.dateFormat) }
                         Log.d("TEST_PROGRAM", "cek current moneyplan $currentMoneyPlan")
                         onDateClickListener(currentMoneyPlan?.id ?: 0, date.dateFormat)
                     },
-                    uiState = uiState.value,
-                    onSelectedMonth = { yearMonth -> toSelectedMonth(yearMonth) }
+                    uiState = uiState,
+                    onSelectedMonth = { yearMonth -> viewModel.toSelectedMonth(yearMonth) }
                 )
             } else {
                 EmptyPlanView(padding)

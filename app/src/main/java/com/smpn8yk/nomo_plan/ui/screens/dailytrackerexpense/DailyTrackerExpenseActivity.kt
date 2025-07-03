@@ -1,4 +1,4 @@
-package com.smpn8yk.nomo_plan.ui.screens
+package com.smpn8yk.nomo_plan.ui.screens.dailytrackerexpense
 
 import android.content.Context
 import android.os.Bundle
@@ -44,14 +44,12 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.room.Room.databaseBuilder
-import com.smpn8yk.nomo_plan.data.Expense
-import com.smpn8yk.nomo_plan.data.ExpenseReportStatus
-import com.smpn8yk.nomo_plan.data.MoneyPlanStatus
-import com.smpn8yk.nomo_plan.data.MoneyPlanWithExpenses
-import com.smpn8yk.nomo_plan.db.MoneyPlanDatabase
+import com.smpn8yk.nomo_plan.data.local.entity.Expense
+import com.smpn8yk.nomo_plan.data.local.entity.ExpenseReportStatus
+import com.smpn8yk.nomo_plan.data.local.entity.MoneyPlanStatus
+import com.smpn8yk.nomo_plan.data.local.entity.MoneyPlanWithExpenses
+import com.smpn8yk.nomo_plan.data.db.MoneyPlanDatabase
 import com.smpn8yk.nomo_plan.ui.MyEventListener
-import com.smpn8yk.nomo_plan.ui.theme.CoklatKayu
-import com.smpn8yk.nomo_plan.ui.theme.IjoBg
 import com.smpn8yk.nomo_plan.ui.theme.IjoYes
 import com.smpn8yk.nomo_plan.ui.theme.Krem
 import com.smpn8yk.nomo_plan.ui.theme.MerahNo

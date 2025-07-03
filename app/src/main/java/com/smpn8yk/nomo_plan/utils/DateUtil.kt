@@ -2,8 +2,8 @@ package com.smpn8yk.nomo_plan.utils
 
 import android.util.Log
 import com.smpn8yk.nomo_plan.data.CalendarUiState
-import com.smpn8yk.nomo_plan.data.ExpenseReportStatus
-import com.smpn8yk.nomo_plan.data.MoneyPlanWithExpenses
+import com.smpn8yk.nomo_plan.data.local.entity.ExpenseReportStatus
+import com.smpn8yk.nomo_plan.data.local.entity.MoneyPlanWithExpenses
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -18,7 +18,8 @@ object DateUtil {
             val daysOfWeek = Array(7) { "" }
 
             for (dayOfWeek in DayOfWeek.entries) {
-                val localizedDayName = dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+                val localizedDayName =
+                    dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
                 daysOfWeek[dayOfWeek.value - 1] = localizedDayName
             }
 
@@ -26,7 +27,10 @@ object DateUtil {
         }
 }
 
-fun getDates(yearMonth: YearMonth,moneyPLanWithExpenses:List<MoneyPlanWithExpenses>): List<CalendarUiState.Date> {
+fun getDates(
+    yearMonth: YearMonth,
+    moneyPLanWithExpenses: List<MoneyPlanWithExpenses>
+): List<CalendarUiState.Date> {
     return yearMonth.getDayOfMonthStartingFromMonday()
         .map { date ->
             val dateFormat =
@@ -35,9 +39,13 @@ fun getDates(yearMonth: YearMonth,moneyPLanWithExpenses:List<MoneyPlanWithExpens
                 } else {
                     "" // Fill with empty string for days outside the current month
                 }
-            val currentMoneyPlan = moneyPLanWithExpenses.map { it.plan}.find { it.range_dates.contains(dateFormat) }
-            val reportStatus = moneyPLanWithExpenses.find { it.plan == currentMoneyPlan }?.expenses?.find { it.date.equals(dateFormat) }?.report_status
-            Log.d("TEST_PROGRAM","get date status : $moneyPLanWithExpenses and $reportStatus")
+            val currentMoneyPlan =
+                moneyPLanWithExpenses.map { it.plan }.find { it.range_dates.contains(dateFormat) }
+            val reportStatus =
+                moneyPLanWithExpenses.find { it.plan == currentMoneyPlan }?.expenses?.find {
+                    it.date.equals(dateFormat)
+                }?.report_status
+            Log.d("TEST_PROGRAM", "get date status : $moneyPLanWithExpenses and $reportStatus")
             CalendarUiState.Date(
                 dayOfMonth = if (date.monthValue == yearMonth.monthValue) {
                     "${date.dayOfMonth}"
@@ -47,11 +55,11 @@ fun getDates(yearMonth: YearMonth,moneyPLanWithExpenses:List<MoneyPlanWithExpens
 
                 isSelected = date.isEqual(LocalDate.now()) && date.monthValue == yearMonth.monthValue,
                 dateFormat = dateFormat,
-                status = if(currentMoneyPlan?.range_dates?.contains(dateFormat) == true && reportStatus == null){
+                status = if (currentMoneyPlan?.range_dates?.contains(dateFormat) == true && reportStatus == null) {
                     ExpenseReportStatus.EMPTY.name
-                }else if(currentMoneyPlan?.range_dates?.contains(dateFormat) == true && reportStatus != null){
+                } else if (currentMoneyPlan?.range_dates?.contains(dateFormat) == true && reportStatus != null) {
                     reportStatus
-                }else{
+                } else {
                     ExpenseReportStatus.NONE.name
                 }
             )
@@ -72,8 +80,8 @@ fun YearMonth.getDisplayName(): String {
     return "${month.getDisplayName(TextStyle.FULL, Locale.getDefault())} $year"
 }
 
-fun YearMonth.getDateFormat(day:Int): String {
+fun YearMonth.getDateFormat(day: Int): String {
     val date = atDay(day).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-    Log.d("TEST_PROGRAM","get date fomat : $date")
+    Log.d("TEST_PROGRAM", "get date fomat : $date")
     return date
 }

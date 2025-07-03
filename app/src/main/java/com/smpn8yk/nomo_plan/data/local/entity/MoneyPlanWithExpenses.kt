@@ -1,4 +1,4 @@
-package com.smpn8yk.nomo_plan.data
+package com.smpn8yk.nomo_plan.data.local.entity
 
 import androidx.room.Embedded
 import androidx.room.Relation

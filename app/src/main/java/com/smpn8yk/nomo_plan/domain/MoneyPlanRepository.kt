@@ -1,11 +1,14 @@
-package com.smpn8yk.nomo_plan.data
+package com.smpn8yk.nomo_plan.domain
 
+import com.smpn8yk.nomo_plan.data.local.entity.Expense
+import com.smpn8yk.nomo_plan.data.local.entity.MoneyPlan
+import com.smpn8yk.nomo_plan.data.local.entity.MoneyPlanWithExpenses
 import kotlinx.coroutines.flow.Flow
 
 interface MoneyPlanRepository {
     suspend fun insertMoneyPlan(moneyPlan: MoneyPlan)
 
-    fun getMoneyPlanWithExpenses(id: Int): Flow<MoneyPlanWithExpenses>?
+    fun getMoneyPlanWithExpenses(id: Int): MoneyPlanWithExpenses?
 
     fun getALlMoneyPlanWithExpenses(): Flow<List<MoneyPlanWithExpenses>>
 

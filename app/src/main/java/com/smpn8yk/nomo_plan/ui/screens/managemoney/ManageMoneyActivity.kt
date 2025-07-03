@@ -1,4 +1,4 @@
-package com.smpn8yk.nomo_plan.ui.screens
+package com.smpn8yk.nomo_plan.ui.screens.managemoney
 
 import android.os.Bundle
 import android.util.Log
@@ -34,8 +34,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.room.Room.databaseBuilder
-import com.smpn8yk.nomo_plan.data.MoneyPlan
-import com.smpn8yk.nomo_plan.db.MoneyPlanDatabase
+import com.smpn8yk.nomo_plan.data.local.entity.MoneyPlan
+import com.smpn8yk.nomo_plan.data.db.MoneyPlanDatabase
 import com.smpn8yk.nomo_plan.ui.theme.IjoDaun
 import com.smpn8yk.nomo_plan.ui.theme.NomoPlanTheme
 import kotlinx.coroutines.CoroutineScope

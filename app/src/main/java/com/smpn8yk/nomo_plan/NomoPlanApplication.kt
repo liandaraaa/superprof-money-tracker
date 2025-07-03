@@ -1,4 +1,7 @@
 package com.smpn8yk.nomo_plan
 
-class NomoPlanApplication {
-}
+import android.app.Application
+import dagger.hilt.android.HiltAndroidApp
+
+@HiltAndroidApp
+class NomoPlanApplication : Application()

@@ -1,4 +1,4 @@
-package com.project.logger.viewmodels
+package com.smpn8yk.nomo_plan.ui.viewmodels
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel

@@ -1,10 +1,13 @@
-package com.smpn8yk.nomo_plan.data
+package com.smpn8yk.nomo_plan.data.local
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import com.smpn8yk.nomo_plan.data.local.entity.Expense
+import com.smpn8yk.nomo_plan.data.local.entity.MoneyPlan
+import com.smpn8yk.nomo_plan.data.local.entity.MoneyPlanWithExpenses
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -14,7 +17,7 @@ interface MoneyPlanDao {
 
     @Transaction
     @Query("SELECT * FROM moneyplan Where id = :id")
-    fun getMoneyPlanWithExpenses(id: Int): Flow<MoneyPlanWithExpenses>?
+    fun getMoneyPlanWithExpenses(id: Int): MoneyPlanWithExpenses?
 
     @Transaction
     @Query("SELECT * FROM moneyplan")
