@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,6 +20,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -99,6 +102,9 @@ fun DailyTrackerExpenseView(
 
     val disableCompleteButton = remember { mutableStateOf(false) }
 
+    val isOverBudget = remember { mutableStateOf(false) }
+    val totalExpenses = remember { mutableStateOf(0) }
+
     val currentExpenses =
         plansExpenses.expenses.filter { it.date == selectedDate }
 
@@ -114,15 +120,16 @@ fun DailyTrackerExpenseView(
         disableCompleteButton.value = true
     }
 
-//    MyEventListener {
-//        when (it) {
-//            Lifecycle.Event.ON_RESUME -> {
-//                checkMoneyPlanExist()
-//            }
-//
-//            else -> {}
-//        }
-//    }
+    fun checkReport() {
+        val total =
+            plansExpenses.expenses.map { it.price }.reduce { acc, price -> acc + price }
+        totalExpenses.value = total
+        isOverBudget.value = total > plansExpenses.plan.budget
+    }
+
+    if(plansExpenses.expenses.isNotEmpty()){
+        checkReport()
+    }
 
     Scaffold(
         topBar = {
@@ -160,16 +167,47 @@ fun DailyTrackerExpenseView(
         },
         bottomBar = {
             if (isMoneyPlanInRangeDates !== null) {
-                Button(
-                    enabled = !disableCompleteButton.value,
-                    onClick = {
-                        showCompleteReportDialog.value = true
-                    },
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth()
-                ) {
-                    Text("Complete Report")
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                ){
+                    Text(
+                        text = "Total Expenses : Rp ${totalExpenses.value}",
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Text(
+                        text = "Remaining Budget : Rp ${plansExpenses.plan.budget - totalExpenses.value}",
+                        color = if(isOverBudget.value){
+                            MerahNo
+                        }else{
+                            IjoYes
+                        }
+                    )
+                    Button(
+                        enabled = !disableCompleteButton.value,
+                        onClick = {
+                            showCompleteReportDialog.value = true
+                        },
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if(disableCompleteButton.value && isOverBudget.value){
+                                MerahNo
+                            }else{
+                                IjoYes
+                            }
+                        )
+                    ) {
+                        Text(
+                            text = if(!disableCompleteButton.value){
+                                "Complete Report"
+                            }else if(disableCompleteButton.value && isOverBudget.value){
+                                "You out of your budget"
+                            }else{
+                                "Congrats! you on budget"
+                            }
+                        )
+                    }
                 }
             }
         },
@@ -196,8 +234,7 @@ fun DailyTrackerExpenseView(
                             status = newPlanStatus
                         )
                     },
-                    currentBudget = plansExpenses.plan.budget,
-                    currentPlanExpenses = currentExpenses
+                    isOverBudget = isOverBudget.value
                 )
             }
             InputExpenseDialogView(
@@ -444,16 +481,14 @@ fun PreviewInputExpenseContentViewDialog() {
 fun CompleteReportDialogView(
     showDialog: Boolean,
     onDismiss: (isOverBudget: Boolean) -> Unit,
-    currentBudget: Int,
-    currentPlanExpenses: List<Expense>,
+    isOverBudget: Boolean
 ) {
     if (showDialog) {
         Dialog(
             onDismissRequest = {},
         ) {
             CompleteReportDialogContentView(
-                currentBudget = currentBudget,
-                currentPlanExpenses = currentPlanExpenses,
+                isOverBudget = isOverBudget,
                 onOkClicked = onDismiss
             )
         }
@@ -464,29 +499,12 @@ fun CompleteReportDialogView(
 
 @Composable
 fun CompleteReportDialogContentView(
-    currentBudget: Int,
-    currentPlanExpenses: List<Expense>,
+    isOverBudget: Boolean,
     onOkClicked: (isOverBudget: Boolean) -> Unit
 ) {
-
-    val isOverBudget = remember { mutableStateOf(false) }
-
-    fun checkReport() {
-        val totalExpenses =
-            currentPlanExpenses.map { it.price }.reduce { acc, price -> acc + price }
-        isOverBudget.value = totalExpenses > currentBudget
-        Log.d(
-            "TEST_PROGRAM",
-            "Cek reprot : $totalExpenses over budget $currentBudget result ${isOverBudget.value}"
-        )
-
-    }
-
-    checkReport()
-
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (isOverBudget.value) MerahNo else IjoYes
+            containerColor = if (isOverBudget) MerahNo else IjoYes
         )
     ) {
         Column(
@@ -496,11 +514,11 @@ fun CompleteReportDialogContentView(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = if (isOverBudget.value) "Pengeluaran kamu lebih besar dari budget. Yuk perbaiki, kamu bisa!" else "Kamu Hebat! Kamu sudah bisa mengatur pengeluranmu dengan baik",
+                text = if (isOverBudget) "Pengeluaran kamu lebih besar dari budget. Yuk perbaiki, kamu bisa!" else "Kamu Hebat! Kamu sudah bisa mengatur pengeluranmu dengan baik",
             )
             Button(
                 onClick = {
-                    onOkClicked(isOverBudget.value)
+                    onOkClicked(isOverBudget)
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -510,14 +528,4 @@ fun CompleteReportDialogContentView(
             }
         }
     }
-}
-
-@Preview
-@Composable
-fun PreviewCompleteReportContentDialogView() {
-    CompleteReportDialogContentView(
-        currentBudget = 0,
-        currentPlanExpenses = listOf(),
-        onOkClicked = {}
-    )
 }
